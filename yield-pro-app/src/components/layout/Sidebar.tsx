@@ -31,19 +31,19 @@ export const Sidebar: React.FC = () => {
     const isAdmin = profile?.role === 'admin'
 
     return (
-        <div className={`h-screen flex flex-col bg-card border-r transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
-            <div className="p-6 flex items-center justify-between border-b">
+        <div className={`h-screen flex flex-col bg-slate-900 border-r border-white/10 transition-all duration-300 text-slate-300 shadow-2xl ${collapsed ? 'w-20' : 'w-64'}`}>
+            <div className="p-6 flex items-center justify-between border-b border-white/10 bg-slate-950">
                 {!collapsed && (
                     <div className="flex items-center gap-2">
-                        <div className="p-2 bg-primary rounded-lg text-primary-foreground">
-                            <TrendingUp className="w-6 h-6" />
+                        <div className="p-2 bg-primary rounded-lg text-primary-foreground shadow-lg shadow-primary/20">
+                            <TrendingUp className="w-5 h-5" />
                         </div>
-                        <span className="font-bold text-xl tracking-tight">YieldPro</span>
+                        <span className="font-black text-xl tracking-tighter text-white">YieldPro</span>
                     </div>
                 )}
                 <button
                     onClick={() => setCollapsed(!collapsed)}
-                    className="p-1 hover:bg-muted rounded-md text-muted-foreground ml-auto"
+                    className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 ml-auto transition-colors"
                 >
                     {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
                 </button>
@@ -56,13 +56,13 @@ export const Sidebar: React.FC = () => {
                         <Link
                             key={item.path}
                             to={item.path}
-                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive
-                                    ? 'bg-primary text-primary-foreground shadow-sm'
-                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${isActive
+                                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
+                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
                                 }`}
                         >
-                            <item.icon className="w-5 h-5 flex-shrink-0" />
-                            {!collapsed && <span className="font-medium">{item.label}</span>}
+                            <item.icon className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-white' : ''}`} />
+                            {!collapsed && <span className="font-bold tracking-tight text-sm">{item.label}</span>}
                         </Link>
                     )
                 })}
@@ -70,31 +70,38 @@ export const Sidebar: React.FC = () => {
                 {isAdmin && (
                     <Link
                         to="/admin"
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors mt-8 ${location.pathname === '/admin'
-                                ? 'bg-destructive/10 text-destructive border border-destructive/20'
-                                : 'text-muted-foreground hover:bg-destructive/5 hover:text-destructive'
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all mt-8 group ${location.pathname === '/admin'
+                            ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25'
+                            : 'text-slate-400 hover:bg-rose-500/10 hover:text-rose-500'
                             }`}
                     >
-                        <ShieldCheck className="w-5 h-5 flex-shrink-0" />
-                        {!collapsed && <span className="font-medium">Admin Panel</span>}
+                        <ShieldCheck className="w-5 h-5 flex-shrink-0 group-hover:rotate-12 transition-transform" />
+                        {!collapsed && <span className="font-bold tracking-tight text-sm">Strategic Admin</span>}
                     </Link>
                 )}
             </nav>
 
-            <div className="p-4 border-t mt-auto">
+            <div className="p-4 border-t border-white/10 mt-auto bg-slate-950/50">
                 {!collapsed && (
                     <div className="mb-4 px-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Utilisateur</p>
-                        <p className="text-sm font-medium truncate">{profile?.full_name || 'Utilisateur'}</p>
-                        <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Authenticated User</p>
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs font-bold text-white uppercase">
+                                {profile?.full_name?.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-sm font-bold text-white truncate leading-tight">{profile?.full_name || 'Utilisateur'}</p>
+                                <p className="text-[10px] text-slate-500 truncate mt-0.5">{profile?.email}</p>
+                            </div>
+                        </div>
                     </div>
                 )}
                 <button
                     onClick={() => signOut()}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-white/5 hover:text-rose-400 rounded-lg transition-all group"
                 >
-                    <LogOut className="w-5 h-5 flex-shrink-0" />
-                    {!collapsed && <span className="font-medium">Déconnexion</span>}
+                    <LogOut className="w-5 h-5 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
+                    {!collapsed && <span className="font-bold tracking-tight text-sm">Sign Out</span>}
                 </button>
             </div>
         </div>

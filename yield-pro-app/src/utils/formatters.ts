@@ -15,18 +15,24 @@ export const formatCurrency = (amount: number, currency: string = 'EUR'): string
 }
 
 export const formatDate = (date: Date | string): string => {
+  if (!date) return '-'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return '-'
   return new Intl.DateTimeFormat('fr-FR', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
-  }).format(new Date(date))
+  }).format(d)
 }
 
 export const formatShortDate = (date: Date | string): string => {
+  if (!date) return '-'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return '-'
   return new Intl.DateTimeFormat('fr-FR', {
     day: '2-digit',
     month: 'short',
-  }).format(new Date(date))
+  }).format(d)
 }
 
 export const calculateTrend = (current: number, previous: number): number => {

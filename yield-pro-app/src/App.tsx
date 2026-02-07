@@ -6,6 +6,13 @@ import { RegisterForm } from './components/auth/RegisterForm'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import { DashboardContent } from './components/dashboard/DashboardContent'
 import { AdminPanel } from './components/admin/AdminPanel'
+import { PricingGrid } from './components/grid/PricingGrid'
+import {
+  CompetitorsPage,
+  YieldAnalysisPage,
+  HistoryPage,
+  SettingsPage
+} from './components/pages/PlaceholderPages'
 import { Loader2 } from 'lucide-react'
 
 // Protected Route Component
@@ -35,20 +42,26 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean 
 }
 
 function App() {
+  const { user } = useAuthStore()
+
   return (
     <Router>
       <AuthProvider>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={
-            <div className="min-h-screen flex items-center justify-center bg-background p-4">
-              <LoginForm />
-            </div>
+            user ? <Navigate to="/dashboard" /> : (
+              <div className="min-h-screen flex items-center justify-center bg-background p-4">
+                <LoginForm />
+              </div>
+            )
           } />
           <Route path="/register" element={
-            <div className="min-h-screen flex items-center justify-center bg-background p-4">
-              <RegisterForm />
-            </div>
+            user ? <Navigate to="/dashboard" /> : (
+              <div className="min-h-screen flex items-center justify-center bg-background p-4">
+                <RegisterForm />
+              </div>
+            )
           } />
 
           {/* Protected Routes */}
@@ -56,6 +69,46 @@ function App() {
             <ProtectedRoute>
               <DashboardLayout>
                 <DashboardContent />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/grid" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <PricingGrid />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/competitors" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <CompetitorsPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/yield" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <YieldAnalysisPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/history" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <HistoryPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <SettingsPage />
               </DashboardLayout>
             </ProtectedRoute>
           } />

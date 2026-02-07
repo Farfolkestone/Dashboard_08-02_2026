@@ -29,45 +29,68 @@ export const useRMSCalculations = (
   disponibilites: Disponibilites[],
   apercu: BookingApercu[]
 ) => {
-  const kpis: KPIData = useMemo(() => {
-    if (!reservations.length || !disponibilites.length) {
-      return {
-        occupancyRate: 0,
-        adr: 0,
-        revpar: 0,
-        pickupRooms: 0,
-        pickupRevenue: 0,
-        totalRooms: 0,
-        occupiedRooms: 0,
-      }
-    }
+  // Configuration des capacités par hôtel
+  const HOTEL_CAPACITIES: Record<string, number> = {
+    'H2258': 45, // Folkestone Opéra
+    'DEMO': 50
+  }
 
-    // Calcul des chambres totales
-    const totalRooms = disponibilites.reduce((sum, d) => sum + (d.disponibilites || 0), 0)
-    
-    // Calcul des chambres occupées (réservations confirmées)
-    const confirmedReservations = reservations.filter(r => r.Etat === 'Confirmée')
-    const occupiedRooms = confirmedReservations.reduce((sum, r) => sum + (r.Chambres || 0), 0)
-    
-    // Taux d'occupation
-    const occupancyRate = totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0
-    
-    // ADR (Average Daily Rate)
-    const totalRevenue = confirmedReservations.reduce((sum, r) => sum + (r['Montant total'] || 0), 0)
-    const adr = occupiedRooms > 0 ? totalRevenue / occupiedRooms : 0
-    
-    // RevPAR
-    const revpar = totalRooms > 0 ? totalRevenue / totalRooms : 0
-    
-    // Pickup (réservations des 7 derniers jours)
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    const recentReservations = confirmedReservations.filter(r => {
-      const purchaseDate = r['Date d\'achat'] ? new Date(r['Date d\'achat']) : null
-      return purchaseDate && purchaseDate >= sevenDaysAgo
+  const kpis: KPIData = useMemo(() => {
+    // 1. Détermination de la capacité de l'hôtel
+    // On essaie de trouver l'ID hôtel dans les résas ou aperçu sinon on prend le profil
+    const currentHotelId = reservations[0]?.hotel_id || apercu[0]?.hotel_id || 'H2258'
+    const capacityPerDay = HOTEL_CAPACITIES[currentHotelId] || 30 // Défaut à 30 si inconnu
+
+    // 2. Calcul du nombre de jours couverts par les données ou la sélection
+    // On se base sur la période sélectionnée pour le calcul du RevPAR et de l'Occupation
+    const startDate = apercu.length > 0 ? new Date((apercu[0] as any).date) : new Date()
+    const endDate = apercu.length > 0 ? new Date((apercu[apercu.length - 1] as any).date) : new Date()
+    const dayCount = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)) + 1)
+
+    const totalRoomsCapacity = capacityPerDay * dayCount
+
+    // 3. Filtrage des réservations confirmées (gestion casse et possible 'e' final)
+    const confirmedReservations = reservations.filter(r => {
+      const etat = (r as any).Etat || ''
+      return etat.toLowerCase().startsWith('confirm') // Capture 'Confirmée', 'Confirmé', 'Confirmed'
     })
-    const pickupRooms = recentReservations.reduce((sum, r) => sum + (r.Chambres || 0), 0)
-    const pickupRevenue = recentReservations.reduce((sum, r) => sum + (r['Montant total'] || 0), 0)
+
+    // 4. Calcul des chambres occupées et du revenu
+    // Utilisation des colonnes normalisées : total_amount, Chambres
+    const occupiedRooms = confirmedReservations.reduce((sum, r: any) => sum + (Number(r.Chambres) || 0), 0)
+    const totalRevenue = confirmedReservations.reduce((sum, r: any) => sum + (Number(r.total_amount) || 0), 0)
+
+    // Taux d'occupation (Total chambres vendues / Capacité totale sur la période)
+    const occupancyRate = totalRoomsCapacity > 0 ? (occupiedRooms / totalRoomsCapacity) * 100 : 0
+
+    // ADR (Average Daily Rate) : CA / Chambres Vendues
+    const adr = occupiedRooms > 0 ? totalRevenue / occupiedRooms : 0
+
+    // RevPAR : CA / Capacité Totale
+    const revpar = totalRoomsCapacity > 0 ? totalRevenue / totalRoomsCapacity : 0
+
+    // 5. Calcul du Pickup (réservations prises lors des 7 derniers jours)
+    const now = new Date()
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(now.getDate() - 7)
+
+    const recentReservations = confirmedReservations.filter((r: any) => {
+      const pDateStr = r.purchase_date || r["Date d'achat"]
+      if (!pDateStr) return false
+
+      const pDate = new Date(pDateStr)
+      // Si format français JJ/MM/AAAA, Date(JJ/MM/AAAA) échoue, on tente un split
+      if (isNaN(pDate.getTime()) && typeof pDateStr === 'string' && pDateStr.includes('/')) {
+        const [day, month, year] = pDateStr.split('/')
+        const parsedDate = new Date(Number(year), Number(month) - 1, Number(day))
+        return parsedDate >= sevenDaysAgo
+      }
+
+      return !isNaN(pDate.getTime()) && pDate >= sevenDaysAgo
+    })
+
+    const pickupRooms = recentReservations.reduce((sum, r: any) => sum + (Number(r.Chambres) || 0), 0)
+    const pickupRevenue = recentReservations.reduce((sum, r: any) => sum + (Number(r.total_amount) || 0), 0)
 
     return {
       occupancyRate,
@@ -75,23 +98,23 @@ export const useRMSCalculations = (
       revpar,
       pickupRooms,
       pickupRevenue,
-      totalRooms,
+      totalRooms: totalRoomsCapacity,
       occupiedRooms,
     }
-  }, [reservations, disponibilites])
+  }, [reservations, apercu])
 
   const pricingSuggestions: PricingSuggestion[] = useMemo(() => {
     if (!apercu.length) return []
 
-    return apercu.map(day => {
-      const currentPrice = day['Votre hôtel le plus bas'] || 0
-      const marketDemand = day['Demande du marché'] || 0
-      const competitorAvg = day['médiane du compset'] || 0
-      
+    return apercu.map((day: any) => {
+      const currentPrice = day.own_price || 0
+      const marketDemand = day.market_demand || 0
+      const competitorAvg = day.compset_median || 0
+
       // Algorithme simple de suggestion
       let suggestedPrice = currentPrice
       let reason = ''
-      
+
       if (marketDemand > 80 && currentPrice < competitorAvg * 1.1) {
         suggestedPrice = currentPrice * 1.1
         reason = 'Forte demande du marché'
@@ -107,7 +130,7 @@ export const useRMSCalculations = (
       const changePercent = currentPrice > 0 ? (change / currentPrice) * 100 : 0
 
       return {
-        date: day.Date || '',
+        date: day.date || '',
         currentPrice,
         suggestedPrice: Math.round(suggestedPrice),
         change: Math.round(change),

@@ -12,8 +12,8 @@ const fetchEvents = async (hotelId: string, startDate: Date, endDate: Date): Pro
     .from('events_calendar')
     .select('*')
     .eq('hotel_id', hotelId)
-    .gte('Début', startDate.toISOString().split('T')[0])
-    .lte('Fin', endDate.toISOString().split('T')[0])
+    .gte('start_date', startDate.toISOString().split('T')[0])
+    .lte('end_date', endDate.toISOString().split('T')[0])
 
   if (error) throw error
   return data || []
@@ -55,9 +55,9 @@ const fetchReservations = async (hotelId: string, startDate: Date, endDate: Date
     .from('booking_export')
     .select('*')
     .eq('hotel_id', hotelId)
-    .gte('Date d\'arrivée', startDate.toISOString().split('T')[0])
-    .lte('Date d\'arrivée', endDate.toISOString().split('T')[0])
-    .order('Date d\'arrivée', { ascending: true })
+    .gte('arrival_date', startDate.toISOString().split('T')[0])
+    .lte('arrival_date', endDate.toISOString().split('T')[0])
+    .order('arrival_date', { ascending: true })
 
   if (error) throw error
   return data || []

@@ -1,63 +1,62 @@
 import React, { useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/useAuthStore'
-import type { Session, AuthChangeEvent } from '@supabase/supabase-js'
+import type { Session } from '@supabase/supabase-js'
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { setUser, setProfile } = useAuthStore()
 
     useEffect(() => {
-        // Initial session check
-        supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
-            setUser(session?.user ?? null)
-            if (session?.user) {
-                fetchProfile(session.user.id)
-            } else {
-                useAuthStore.setState({ loading: false, initialized: true })
-            }
-        })
+        let isMounted = true;
 
-        // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
-            setUser(session?.user ?? null)
-            if (session?.user) {
-                await fetchProfile(session.user.id)
-            } else {
-                setProfile(null)
-            }
-            useAuthStore.setState({ loading: false, initialized: true })
-        })
+        // Fonction pour charger le profil et débloquer l'état
+        const handleAuthChange = async (session: Session | null) => {
+            try {
+                if (session?.user) {
+                    setUser(session.user);
+                    // On récupère le profil
+                    const { data } = await supabase
+                        .from('user_profiles')
+                        .select('*')
+                        .eq('user_id', session.user.id)
+                        .maybeSingle();
 
-        return () => subscription.unsubscribe()
-    }, [setUser, setProfile])
-
-    const fetchProfile = async (userId: string) => {
-        try {
-            const { data, error } = await supabase
-                .from('user_profiles')
-                .select('*')
-                .eq('user_id', userId)
-                .single()
-
-            if (error) {
-                // Ignore PGRST116 (no rows) as it's expected for new users before trigger runs
-                if (error.code !== 'PGRST116') {
-                    console.error('Error fetching profile:', error.message, error.details, error.hint)
+                    if (isMounted && data) {
+                        setProfile(data as any);
+                    }
+                } else {
+                    setUser(null);
+                    setProfile(null);
+                }
+            } catch (err) {
+                console.error('Auth change handling error:', err);
+            } finally {
+                // IMPORTANT: On marque comme initialisé quoi qu'il arrive pour débloquer l'UI
+                if (isMounted) {
+                    useAuthStore.setState({ loading: false, initialized: true });
                 }
             }
+        };
 
-            if (data) {
-                setProfile(data as any)
+        // 1. Détecter la session initiale
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (isMounted) {
+                handleAuthChange(session);
             }
-        } catch (err: any) {
-            // Ignore AbortError which happens on rapid navigation/unmounts
-            if (err.name !== 'AbortError') {
-                console.error('Unexpected error fetching profile:', err)
+        });
+
+        // 2. Écouter les changements futurs
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (isMounted) {
+                handleAuthChange(session);
             }
-        } finally {
-            useAuthStore.setState({ loading: false, initialized: true })
-        }
-    }
+        });
+
+        return () => {
+            isMounted = false;
+            subscription.unsubscribe();
+        };
+    }, [setUser, setProfile])
 
     return <>{children}</>
 }
