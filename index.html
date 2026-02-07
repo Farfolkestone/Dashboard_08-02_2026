@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="YieldManager Pro V3.0 - Application de Revenue Management Hôtelier Intelligente">
+    <title>YieldManager Pro V3.0</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Excel Parser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Animations -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    
+    <!-- Styles locaux (Assurez-vous que style.css est dans le même dossier) -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Fallback CSS inline pour éviter les problèmes de chargement -->
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #3b82f6;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #06b6d4;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --bg-dark: #1e293b;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --text-light: #ffffff;
+            --border-color: #e2e8f0;
+            --border-focus: #3b82f6;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+        }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            z-index: 100;
+        }
+        .main-content {
+            margin-left: 260px;
+            min-height: 100vh;
+        }
+        .indices-panel {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg, 12px);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .panel-header.compact {
+            padding: 0.75rem 1rem;
+        }
+        .panel-title-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .panel-title-group h3 {
+            margin: 0;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .panel-title-group i {
+            color: var(--primary-color);
+        }
+        .panel-body {
+            padding: 0.75rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .panel-body.scrollable {
+            max-height: 280px;
+        }
+        .market-share-widget {
+            padding: 0;
+        }
+        .market-share-item {
+            display: flex;
+            flex-direction: column;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .market-share-item:last-child {
+            border-bottom: none;
+        }
+        .market-share-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .market-share-channel {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .market-share-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: white;
+        }
+        .market-share-icon.booking { background: linear-gradient(135deg, #003580 0%, #0056b3 100%); }
+        .market-share-icon.direct { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .market-share-icon.expedia { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .market-share-icon.default { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); }
+        .market-share-name {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .market-share-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: 43px;
+        }
+        .market-share-bar {
+            flex: 1;
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .market-share-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+        .market-share-bar-fill.booking { background: linear-gradient(90deg, #003580 0%, #2563eb 100%); }
+        .market-share-bar-fill.direct { background: linear-gradient(90deg, #10b981 0%, #34d399 100%); }
+        .market-share-bar-fill.expedia { background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%); }
+        .market-share-bar-fill.default { background: linear-gradient(90deg, #6b7280 0%, #9ca3af 100%); }
+        .market-share-percent {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #1e40af;
+        }
+        .market-share-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner">
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+            </div>
+            <h2>YieldManager Pro V3.0</h2>
+            <p>Initialisation du système...</p>
+            <div class="loading-progress">
+                <div class="progress-bar" id="loading-progress-bar"></div>
+            </div>
+            <span class="loading-status" id="loading-status">Chargement des modules...</span>
+        </div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">YieldManager</span>
+                    <span class="brand-version">Pro V3.0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="simulation-control">
+            <div class="control-header">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Date de Simulation</span>
+            </div>
+            <input type="date" id="simulation-date" class="simulation-date-input">
+            <div class="simulation-indicator" id="simulation-indicator">
+                <span class="indicator-dot"></span>
+                <span class="indicator-text">Date système active</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <span class="nav-section-title">Import de Données</span>
+                <div class="file-uploads">
+                    <div class="upload-item" data-file="lighthouse" data-tooltip="Demande du marché">
+                        <input type="file" id="file-lighthouse" accept=".xlsx,.xls" hidden>
+                        <div class="upload-content">
+                            <div class="upload-icon lighthouse"><i class="fas fa-chart-pie"></i></div>
+                            <div class="upload-info">
+                                <span class="upload-title">Demande Marché</span>
+                                <span class="upload-subtitle">Lighthouse Analytics</span>
+                            </div>
+                            <div class="upload-status"><i class="fas fa-check-circle"></i></div>
+                        </div>
+                    </div>
+                    
+                    <div class="upload-item" data-file="events" data-tooltip="Événements et salons">
+                        <input type="file" id="file-events" accept=".xlsx,.xls" hidden>
+                        <div class="upload-content">
+                            <div class="upload-icon events"><i class="fas fa-calendar-star"></i></div>
+                            <div class="upload-info">
+                                <span class="upload-title">Événements</span>
+                                <span class="upload-subtitle">Salons & Événements</span>
+                            </div>
+                            <div class="upload-status"><i class="fas fa-check-circle"></i></div>
+                        </div>
+                    </div>
+                    
+                    <div class="upload-item" data-file="competitors" data-tooltip="Analyse concurrentielle">
+                        <input type="file" id="file-competitors" accept=".csv" hidden>
+                        <div class="upload-content">
+                            <div class="upload-icon competitors"><i class="fas fa-building"></i></div>
+                            <div class="upload-info">
+                                <span class="upload-title">Données Concurrence</span>
+                                <span class="upload-subtitle">Fichier CSV</span>
+                            </div>
+                            <div class="upload-status"><i class="fas fa-check-circle"></i></div>
+                        </div>
+                    </div>
+                    
+                    <div class="upload-item" data-file="availability" data-tooltip="Disponibilités PMS">
+                        <input type="file" id="file-availability" accept=".csv,.txt,.xlsx" hidden>
+                        <div class="upload-content">
+                            <div class="upload-icon availability"><i class="fas fa-bed"></i></div>
+                            <div class="upload-info">
+                                <span class="upload-title">Disponibilités</span>
+                                <span class="upload-subtitle">PMS / Channel</span>
+                            </div>
+                            <div class="upload-status"><i class="fas fa-check-circle"></i></div>
+                        </div>
+                    </div>
+                    
+                    <div class="upload-item" data-file="bookings" data-tooltip="Réservations OTA">
+                        <input type="file" id="file-bookings" accept=".csv" hidden>
+                        <div class="upload-content">
+                            <div class="upload-icon bookings"><i class="fas fa-calendar-check"></i></div>
+                            <div class="upload-info">
+                                <span class="upload-title">Réservations</span>
+                                <span class="upload-subtitle">Booking & Pickup</span>
+                            </div>
+                            <div class="upload-status"><i class="fas fa-check-circle"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="sidebar-kpi">
+            <div class="kpi-mini-header">Aperçu Rapide</div>
+            <div class="kpi-mini-grid">
+                <div class="kpi-mini-item">
+                    <span class="kpi-mini-label">Taux Occupation</span>
+                    <span class="kpi-mini-value" id="mini-to">--%</span>
+                </div>
+                <div class="kpi-mini-item">
+                    <span class="kpi-mini-label">RevPAR Est.</span>
+                    <span class="kpi-mini-value" id="mini-revpar">--€</span>
+                </div>
+                <div class="kpi-mini-item">
+                    <span class="kpi-mini-label">ADR Moyen</span>
+                    <span class="kpi-mini-value" id="mini-adr">--€</span>
+                </div>
+                <div class="kpi-mini-item">
+                    <span class="kpi-mini-label">Pickup 7j</span>
+                    <span class="kpi-mini-value" id="mini-pickup">+0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-actions">
+            <button class="action-btn primary" onclick="app.applyAutoPricing()" data-tooltip="Appliquer l'algorithme de pricing">
+                <i class="fas fa-magic"></i>
+                <span>Appliquer Algo</span>
+            </button>
+            <button class="action-btn secondary" onclick="app.recalculate()" data-tooltip="Recalculer tous les tarifs">
+                <i class="fas fa-calculator"></i>
+                <span>Recalculer</span>
+            </button>
+            <div class="action-row">
+                <button class="action-btn tertiary" onclick="app.saveToLocal()" data-tooltip="Sauvegarder">
+                    <i class="fas fa-save"></i>
+                </button>
+                <button class="action-btn tertiary" onclick="app.exportData()" data-tooltip="Exporter">
+                    <i class="fas fa-file-export"></i>
+                </button>
+                <button class="action-btn tertiary" onclick="app.resetAll()" data-tooltip="Réinitialiser">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="sidebar-console">
+            <div class="console-header">
+                <i class="fas fa-terminal"></i>
+                <span>Journal Système</span>
+                <button class="console-clear" onclick="app.clearConsole()" title="Effacer"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="console-content" id="console"></div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" id="sidebar-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="breadcrumb">
+                    <span class="breadcrumb-item">YieldManager</span>
+                    <i class="fas fa-chevron-right breadcrumb-separator"></i>
+                    <span class="breadcrumb-item active" id="breadcrumb-title">Dashboard</span>
+                </div>
+            </div>
+            
+            <div class="header-center">
+                <div class="view-tabs">
+                    <button class="view-tab active" data-view="dashboard" data-title="Dashboard">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button class="view-tab" data-view="grid" data-title="Grille Tarifaire">
+                        <i class="fas fa-list"></i>
+                        <span>Grille</span>
+                    </button>
+                    <button class="view-tab" data-view="competitors" data-title="Analyse Concurrence">
+                        <i class="fas fa-building"></i>
+                        <span>Concurrence</span>
+                    </button>
+                    <button class="view-tab" data-view="matrix" data-title="Édition Rapide">
+                        <i class="fas fa-th"></i>
+                        <span>Matrice</span>
+                    </button>
+                    <button class="view-tab" data-view="history" data-title="Historique">
+                        <i class="fas fa-history"></i>
+                        <span>Historique</span>
+                    </button>
+                    <button class="view-tab" data-view="settings" data-title="Paramètres">
+                        <i class="fas fa-cog"></i>
+                        <span>Paramètres</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="header-actions">
+                    <button class="header-btn" onclick="app.toggleFullscreen()" title="Plein écran">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    <button class="header-btn" onclick="app.showHelp()" title="Aide">
+                        <i class="fas fa-question-circle"></i>
+                    </button>
+                    <div class="data-status" id="data-status">
+                        <span class="status-dot"></span>
+                        <span class="status-text">En attente de données</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Container -->
+        <div class="content-wrapper">
+            
+            <!-- DASHBOARD VIEW -->
+            <section id="view-dashboard" class="view active animate__animated animate__fadeIn">
+                <div class="dashboard-header">
+                    <div class="dashboard-title">
+                        <h1>Aperçu Performance</h1>
+                        <p class="dashboard-subtitle">Synthèse des indicateurs clés et recommandations tarifaires</p>
+                    </div>
+                    <div class="dashboard-actions">
+                        <select class="dashboard-period" id="dashboard-period" onchange="app.updateDashboardPeriod()">
+                            <option value="7">7 prochains jours</option>
+                            <option value="14">14 prochains jours</option>
+                            <option value="30" selected>30 prochains jours</option>
+                            <option value="60">60 prochains jours</option>
+                            <option value="90">90 prochains jours</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="kpi-grid">
+                    <div class="kpi-card" data-animate="animate__slideInLeft">
+                        <div class="kpi-card-bg"></div>
+                        <div class="kpi-card-content">
+                            <div class="kpi-card-header">
+                                <span class="kpi-title">Chambres OTB</span>
+                                <div class="kpi-icon blue">
+                                    <i class="fas fa-bed"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="kpi-otb">0</div>
+                            <div class="kpi-trend positive">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>Réservations actives</span>
+                            </div>
+                        </div>
+                        <div class="kpi-card-footer">
+                            <div class="kpi-sparkline">
+                                <canvas id="sparkline-otb"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card" data-animate="animate__slideInLeft" style="animation-delay: 0.1s">
+                        <div class="kpi-card-bg"></div>
+                        <div class="kpi-card-content">
+                            <div class="kpi-card-header">
+                                <span class="kpi-title">Pickup 7J</span>
+                                <div class="kpi-icon green">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="kpi-pickup">+0</div>
+                            <div class="kpi-trend neutral">
+                                <i class="fas fa-plus"></i>
+                                <span>Nouvelles réservations</span>
+                            </div>
+                        </div>
+                        <div class="kpi-card-footer">
+                            <div class="kpi-sparkline">
+                                <canvas id="sparkline-pickup"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card" data-animate="animate__slideInLeft" style="animation-delay: 0.2s">
+                        <div class="kpi-card-bg"></div>
+                        <div class="kpi-card-content">
+                            <div class="kpi-card-header">
+                                <span class="kpi-title">ADR Réalisé</span>
+                                <div class="kpi-icon yellow">
+                                    <i class="fas fa-euro-sign"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="kpi-adr">0€</div>
+                            <div class="kpi-trend neutral">
+                                <i class="fas fa-tag"></i>
+                                <span>Prix moyen de vente</span>
+                            </div>
+                        </div>
+                        <div class="kpi-card-footer">
+                            <div class="kpi-sparkline">
+                                <canvas id="sparkline-adr"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card" data-animate="animate__slideInLeft" style="animation-delay: 0.3s">
+                        <div class="kpi-card-bg"></div>
+                        <div class="kpi-card-content">
+                            <div class="kpi-card-header">
+                                <span class="kpi-title">RevPAR Proj.</span>
+                                <div class="kpi-icon purple">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="kpi-revpar">0€</div>
+                            <div class="kpi-trend neutral">
+                                <i class="fas fa-percentage"></i>
+                                <span>Revenu par chambre dispo.</span>
+                            </div>
+                        </div>
+                        <div class="kpi-card-footer">
+                            <div class="kpi-sparkline">
+                                <canvas id="sparkline-revpar"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Panels -->
+                <div class="dashboard-panels">
+                    <!-- Main Charts -->
+                    <div class="charts-row">
+                        <div class="chart-panel main">
+                            <div class="panel-header">
+                                <div class="panel-title-group">
+                                    <h3>Vitesse de Vente & Évolution Tarifaire</h3>
+                                    <p>Pickup 7 jours vs Prix recommandé</p>
+                                </div>
+                                <div class="panel-actions">
+                                    <button class="panel-btn active" data-chart="pickup"><i class="fas fa-chart-bar"></i></button>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="chart-container">
+                                    <canvas id="chart-pickup"></canvas>
+                                </div>
+                                <div class="chart-legend" id="chart-pickup-legend"></div>
+                            </div>
+                        </div>
+
+                        <div class="chart-panel secondary">
+                            <div class="panel-header">
+                                <div class="panel-title-group">
+                                    <h3>Positionnement Tarifaire</h3>
+                                    <p>Votre prix vs Médiane concurrentielle</p>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="chart-container">
+                                    <canvas id="chart-comp"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Indices Panels -->
+                    <div class="indices-row">
+                        <!-- OTA Distribution / Market Share -->
+                        <div class="indices-panel">
+                            <div class="panel-header compact">
+                                <div class="panel-title-group">
+                                    <i class="fas fa-chart-pie" style="color: var(--primary);"></i>
+                                    <h3>Origines Réservations</h3>
+                                </div>
+                                <span class="panel-badge">Market Share</span>
+                            </div>
+                            <div class="panel-body scrollable">
+                                <div class="market-share-widget" id="market-share-widget">
+                                    <div class="market-share-empty">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>Importez le fichier Réservations</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Demand Ranking -->
+                        <div class="indices-panel">
+                            <div class="panel-header compact">
+                                <div class="panel-title-group">
+                                    <i class="fas fa-fire" style="color: var(--accent);"></i>
+                                    <h3>Dates à Forte Demande</h3>
+                                </div>
+                                <span class="panel-badge hot">TOP</span>
+                            </div>
+                            <div class="panel-body scrollable">
+                                <div class="demand-list" id="demand-ranking">
+                                    <div class="empty-state">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                        <p>Analyse en cours...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cancellation Risk -->
+                        <div class="indices-panel">
+                            <div class="panel-header compact">
+                                <div class="panel-title-group">
+                                    <i class="fas fa-exclamation-triangle" style="color: var(--danger);"></i>
+                                    <h3>Risque d'Annulation</h3>
+                                </div>
+                                <span class="panel-badge warning">Alerte</span>
+                            </div>
+                            <div class="panel-body scrollable">
+                                <div class="cancellation-list" id="cancellation-ranking">
+                                    <div class="empty-state">
+                                        <i class="fas fa-search"></i>
+                                        <p>Analyse des annulations...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendations -->
+                    <div class="recommendations-panel">
+                        <div class="panel-header">
+                            <div class="panel-title-group">
+                                <i class="fas fa-lightbulb" style="color: var(--accent);"></i>
+                                <h3>Recommandations Tarifaires</h3>
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <div class="recommendations-grid" id="recommendations-grid">
+                                <div class="empty-state">
+                                    <i class="fas fa-robot"></i>
+                                    <p>L'algorithme génère des recommandations</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- GRID VIEW -->
+            <section id="view-grid" class="view animate__animated animate__fadeIn">
+                <div class="view-header">
+                    <div class="view-title">
+                        <h1>Grille Tarifaire</h1>
+                        <p>Gestion avancée des tarifs par date</p>
+                    </div>
+                    <div class="view-toolbar">
+                        <div class="toolbar-group">
+                            <label>Période:</label>
+                            <select class="toolbar-select" id="grid-period" onchange="app.filterGrid()">
+                                <option value="7">7 jours</option>
+                                <option value="14">14 jours</option>
+                                <option value="30" selected>30 jours</option>
+                                <option value="60">60 jours</option>
+                                <option value="90">90 jours</option>
+                            </select>
+                        </div>
+                        <div class="toolbar-group">
+                            <label>Statut:</label>
+                            <select class="toolbar-select" id="grid-status" onchange="app.filterGrid()">
+                                <option value="all">Tous</option>
+                                <option value="raise">À monter ↑</option>
+                                <option value="lower">À baisse ↓</option>
+                                <option value="ok">Optimal ✓</option>
+                            </select>
+                        </div>
+                        <div class="toolbar-group">
+                            <label>Prix:</label>
+                            <select class="toolbar-select" id="grid-price-view" onchange="app.togglePriceView()">
+                                <option value="final">Prix Final</option>
+                                <option value="suggested">Prix Suggéré</option>
+                                <option value="diff">Écart</option>
+                            </select>
+                        </div>
+                        <div class="toolbar-actions">
+                            <button class="toolbar-btn" onclick="app.applyToVisible()" data-tooltip="Appliquer à toutes les lignes visibles">
+                                <i class="fas fa-check-double"></i>
+                                <span>Appliquer tout</span>
+                            </button>
+                            <button class="toolbar-btn" onclick="app.copyPrices()" data-tooltip="Copier les prix">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="toolbar-btn" onclick="app.exportGrid()" data-tooltip="Exporter">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-container">
+                    <div class="grid-table-wrapper">
+                        <table class="grid-table" id="grid-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-action"></th>
+                                    <th class="col-date" data-sort="date">Date <i class="fas fa-sort"></i></th>
+                                    <th class="col-demand" data-sort="demand">Demande <i class="fas fa-sort"></i></th>
+                                    <th class="col-competition">Concurrence</th>
+                                    <th class="col-leadtime">Lead Time</th>
+                                    <th class="col-pickup">Pickup</th>
+                                    <th class="col-free">Libres</th>
+                                    <th class="col-to">TO%</th>
+                                    <th class="col-current">Prix Actuel</th>
+                                    <th class="col-suggested">Suggéré</th>
+                                    <th class="col-rack">Mon Tarif Rack</th>
+                                    <th class="col-final">Prix Final</th>
+                                    <th class="col-status">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="grid-body">
+                                <tr class="empty-row">
+                                    <td colspan="13">
+                                        <div class="empty-state">
+                                            <i class="fas fa-cloud-upload-alt"></i>
+                                            <h3>Aucunes données disponibles</h3>
+                                            <p>Importez un fichier Lighthouse pour commencer l'analyse</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid-footer">
+                    <div class="grid-info">
+                        <span id="grid-count">0 lignes</span>
+                        <span class="separator">•</span>
+                        <span id="grid-modified">0 modifications en attente</span>
+                    </div>
+                    <div class="grid-pagination">
+                        <button class="pagination-btn" onclick="app.goToPage('prev')"><i class="fas fa-chevron-left"></i></button>
+                        <span class="pagination-info">Page <span id="current-page">1</span> sur <span id="total-pages">1</span></span>
+                        <button class="pagination-btn" onclick="app.goToPage('next')"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COMPETITORS VIEW -->
+            <section id="view-competitors" class="view animate__animated animate__fadeIn">
+                <div class="view-header">
+                    <div class="view-title">
+                        <h1>Analyse Concurrentielle</h1>
+                        <p>Comparaison détaillée avec la concurrence</p>
+                    </div>
+                    <div class="view-toolbar">
+                        <div class="view-toggle">
+                            <button class="toggle-btn active" data-view="grid"><i class="fas fa-table"></i> Grille</button>
+                            <button class="toggle-btn" data-view="graph"><i class="fas fa-chart-line"></i> Graphique</button>
+                            <button class="toggle-btn" data-view="heatmap"><i class="fas fa-th"></i> Heatmap</button>
+                        </div>
+                        <div class="toolbar-actions">
+                            <button class="toolbar-btn" onclick="app.showCompetitorSelector()">
+                                <i class="fas fa-cog"></i>
+                                <span>Sélectionner</span>
+                            </button>
+                            <button class="toolbar-btn" onclick="app.exportCompetitors()">
+                                <i class="fas fa-download"></i>
+                                <span>Export</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="competitors-container">
+                    <div id="competitors-view-grid" class="competitors-view active">
+                        <div class="competitors-table-wrapper">
+                            <table class="competitors-table" id="comp-grid-table">
+                                <!-- Generated dynamically -->
+                            </table>
+                        </div>
+                    </div>
+                    <div id="competitors-view-graph" class="competitors-view">
+                        <div class="chart-full">
+                            <canvas id="chart-competitors"></canvas>
+                        </div>
+                    </div>
+                    <div id="competitors-view-heatmap" class="competitors-view">
+                        <div class="heatmap-container" id="heatmap-container">
+                            <!-- Generated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MATRIX VIEW -->
+            <section id="view-matrix" class="view animate__animated animate__fadeIn">
+                <div class="view-header">
+                    <div class="view-title">
+                        <h1>Édition Rapide - Matrice</h1>
+                        <p>Vue d'ensemble pour ajustement rapide des tarifs</p>
+                    </div>
+                    <div class="view-toolbar">
+                        <div class="toolbar-group">
+                            <label>Du:</label>
+                            <input type="date" class="toolbar-input" id="matrix-date-start" onchange="app.renderMatrix()">
+                        </div>
+                        <div class="toolbar-group">
+                            <label>Au:</label>
+                            <input type="date" class="toolbar-input" id="matrix-date-end" onchange="app.renderMatrix()">
+                        </div>
+                        <div class="toolbar-group">
+                            <label>Lignes:</label>
+                            <select class="toolbar-select" id="matrix-rows" onchange="app.renderMatrix()">
+                                <option value="current">Prix Actuels</option>
+                                <option value="suggested">Prix Suggérés</option>
+                                <option value="final">Prix Finaux</option>
+                                <option value="rack">Mon Tarif Rack</option>
+                                <option value="all">Tous les prix</option>
+                            </select>
+                        </div>
+                        <div class="toolbar-actions">
+                            <button class="toolbar-btn" onclick="app.copyMatrixRow('suggested')" data-tooltip="Copier tarifs suggérés">
+                                <i class="fas fa-copy"></i>
+                                <span>Suggéré</span>
+                            </button>
+                            <button class="toolbar-btn" onclick="app.copyMatrixRow('rack')" data-tooltip="Copier tarifs rack">
+                                <i class="fas fa-copy"></i>
+                                <span>Rack</span>
+                            </button>
+                            <button class="toolbar-btn" onclick="app.applyMatrixChanges()" data-tooltip="Appliquer les modifications">
+                                <i class="fas fa-save"></i>
+                                <span>Appliquer</span>
+                            </button>
+                            <button class="toolbar-btn" onclick="app.resetMatrix()" data-tooltip="Réinitialiser">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="matrix-container">
+                    <div class="matrix-scroll">
+                        <table class="matrix-table" id="matrix-table">
+                            <!-- Generated dynamically -->
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HISTORY VIEW -->
+            <section id="view-history" class="view animate__animated animate__fadeIn">
+                <div class="view-header">
+                    <div class="view-title">
+                        <h1>Historique des Modifications</h1>
+                        <p>Traçabilité complète des changements tarifaires</p>
+                    </div>
+                    <div class="view-toolbar">
+                        <div class="toolbar-group">
+                            <input type="text" class="toolbar-input" id="history-search" placeholder="Rechercher..." oninput="app.searchHistory()">
+                        </div>
+                        <div class="toolbar-group">
+                            <label>Filtrer:</label>
+                            <select class="toolbar-select" id="history-filter" onchange="app.filterHistory()">
+                                <option value="all">Toutes</option>
+                                <option value="manual">Manuelles</option>
+                                <option value="auto">Automatiques</option>
+                            </select>
+                        </div>
+                        <div class="toolbar-actions">
+                            <button class="toolbar-btn" onclick="app.exportHistory()">
+                                <i class="fas fa-download"></i>
+                                <span>Export</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="history-stats-row">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-value" id="hist-today">0</span>
+                            <span class="stat-label">Aujourd'hui</span>
+                        </div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-value" id="hist-raised">0</span>
+                            <span class="stat-label">Prix Augmentés</span>
+                        </div>
+                    </div>
+                    <div class="stat-card danger">
+                        <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-value" id="hist-lowered">0</span>
+                            <span class="stat-label">Prix Baissés</span>
+                        </div>
+                    </div>
+                    <div class="stat-card neutral">
+                        <div class="stat-icon"><i class="fas fa-equals"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-value" id="hist-unchanged">0</span>
+                            <span class="stat-label">Non Modifiés</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="history-container">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Horodatage</th>
+                                <th>Date Séjour</th>
+                                <th>Type</th>
+                                <th>Prix Précédent</th>
+                                <th>Nouveau Prix</th>
+                                <th>Variation</th>
+                                <th>Source</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <tr class="empty-row">
+                                <td colspan="8">
+                                    <div class="empty-state">
+                                        <i class="fas fa-history"></i>
+                                        <p>Aucunes modifications enregistrées</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SETTINGS VIEW -->
+            <section id="view-settings" class="view animate__animated animate__fadeIn">
+                <div class="settings-container">
+                    <div class="settings-header">
+                        <h1>Paramètres Avancés</h1>
+                        <p>Configuration complète de l'application et de l'algorithme</p>
+                    </div>
+
+                    <div class="settings-nav">
+                        <button class="settings-nav-btn active" data-section="hotel">
+                            <i class="fas fa-hotel"></i>
+                            <span>Hôtel</span>
+                        </button>
+                        <button class="settings-nav-btn" data-section="algorithm">
+                            <i class="fas fa-brain"></i>
+                            <span>Algorithme</span>
+                        </button>
+                        <button class="settings-nav-btn" data-section="multipliers">
+                            <i class="fas fa-sliders-h"></i>
+                            <span>Multiplicateurs</span>
+                        </button>
+                        <button class="settings-nav-btn" data-section="exceptions">
+                            <i class="fas fa-calendar-star"></i>
+                            <span>Périodes Exception</span>
+                        </button>
+                        <button class="settings-nav-btn" data-section="integrations">
+                            <i class="fas fa-plug"></i>
+                            <span>Intégrations</span>
+                        </button>
+                        <button class="settings-nav-btn" data-section="aggressive">
+                            <i class="fas fa-fire"></i>
+                            <span>Stratégie Agressive</span>
+                        </button>
+                        <button class="settings-nav-btn" data-section="data">
+                            <i class="fas fa-database"></i>
+                            <span>Données</span>
+                        </button>
+                    </div>
+
+                    <div class="settings-content">
+                        <!-- Hotel Settings -->
+                        <div class="settings-section active" id="section-hotel">
+                            <h2><i class="fas fa-hotel"></i> Paramètres de l'Établissement</h2>
+                            <div class="settings-grid">
+                                <div class="form-group">
+                                    <label>Nom de l'Établissement</label>
+                                    <input type="text" id="cfg-hotel-name" placeholder="Hôtel Folkestone Opera">
+                                </div>
+                                <div class="form-group">
+                                    <label>Capacité Totale (Chambres)</label>
+                                    <input type="number" id="cfg-rooms" value="45" min="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Objectif Taux d'Occupation (%)</label>
+                                    <div class="range-group">
+                                        <div class="range-header">
+                                            <span>Objectif TO</span>
+                                            <span class="range-value" id="val-target-to">65%</span>
+                                        </div>
+                                        <input type="range" class="range-slider" id="cfg-target-to" min="30" max="95" value="65" oninput="app.updateRangeDisplay('cfg-target-to', 'val-target-to', '%')">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Prix Minimum (€)</label>
+                                    <input type="number" id="cfg-min-price" value="80" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Prix Maximum (€)</label>
+                                    <input type="number" id="cfg-max-price" value="600" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Devise</label>
+                                    <select id="cfg-currency">
+                                        <option value="EUR">Euro (€)</option>
+                                        <option value="USD">Dollar US ($)</option>
+                                        <option value="GBP">Livre Sterling (£)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Marque Tarif Rack (%)</label>
+                                    <div class="range-group">
+                                        <div class="range-header">
+                                            <span>Markup Rack</span>
+                                            <span class="range-value" id="val-rack-rate-markup">15%</span>
+                                        </div>
+                                        <input type="range" class="range-slider" id="cfg-rack-rate-markup" min="0" max="50" value="15" oninput="app.updateRangeDisplay('cfg-rack-rate-markup', 'val-rack-rate-markup', '%')">
+                                        <small class="form-help">Ajouté au tarif suggéré pour le tarif rack</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Algorithm Settings -->
+                        <div class="settings-section" id="section-algorithm">
+                            <h2><i class="fas fa-brain"></i> Configuration de l'Algorithme</h2>
+                            <div class="settings-grid">
+                                <div class="form-group">
+                                    <label>Poids Médiane Concurrence (0.1 - 0.9)</label>
+                                    <div class="range-group">
+                                        <div class="range-header">
+                                            <span>Poids Médiane</span>
+                                            <span class="range-value" id="val-median-weight">0.5</span>
+                                        </div>
+                                        <input type="range" class="range-slider" id="cfg-median-weight" min="0.1" max="0.9" step="0.05" value="0.5" oninput="app.updateRangeDisplay('cfg-median-weight', 'val-median-weight', '')">
+                                    </div>
+                                    <small class="form-help">0 = Prix min concurrent, 1 = Médiane uniquement</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Seuil Filtre Concurrents (€)</label>
+                                    <input type="number" id="cfg-comp-filter" value="100" min="0">
+                                    <small class="form-help">Prix inférieurs exclus du calcul (erreurs/offres atypiques)</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Seuil Modification Significative (€)</label>
+                                    <input type="number" id="cfg-diff-threshold" value="3" min="1">
+                                    <small class="form-help">Différence minimale pour considérer une modification</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Mode de Pricing</label>
+                                    <select id="cfg-pricing-mode">
+                                        <option value="aggressive">Agressif (Maximisation revenu)</option>
+                                        <option value="balanced" selected>Équilibré (Par défaut)</option>
+                                        <option value="conservative">Conservateur (Occupation prioritaire)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Multipliers Settings -->
+                        <div class="settings-section" id="section-multipliers">
+                            <h2><i class="fas fa-sliders-h"></i> Multiplicateurs de Pricing</h2>
+                            
+                            <div class="multipliers-group">
+                                <h3>Demande Marché (Lighthouse)</h3>
+                                <div class="settings-grid">
+                                    <div class="form-group">
+                                        <label>Seuil Demande Basse (%)</label>
+                                        <input type="number" id="cfg-market-low-th" value="20" min="0" max="100">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Seuil Demande Haute (%)</label>
+                                        <input type="number" id="cfg-market-high-th" value="80" min="0" max="100">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Multiplicateur Bas</label>
+                                        <input type="number" step="0.01" id="cfg-market-low-mult" value="0.95" min="0" max="2">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Multiplicateur Haut</label>
+                                        <input type="number" step="0.01" id="cfg-market-high-mult" value="1.10" min="0" max="3">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="multipliers-group">
+                                <h3>Lead Time (Urgence)</h3>
+                                <div class="settings-grid">
+                                    <div class="form-group">
+                                        <label>Seuil Urgent (jours) &lt;</label>
+                                        <input type="number" id="cfg-lt-urgent" value="3" min="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Seuil Court (jours) &lt;</label>
+                                        <input type="number" id="cfg-lt-short" value="7" min="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Multiplicateur Urgent</label>
+                                        <input type="number" step="0.01" id="cfg-lt-urgent-mult" value="1.15" min="0" max="3">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Multiplicateur Court</label>
+                                        <input type="number" step="0.01" id="cfg-lt-short-mult" value="1.08" min="0" max="3">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="multipliers-group">
+                                <h3>Pickup (Vitesse de Vente)</h3>
+                                <div class="settings-grid">
+                                    <div class="form-group">
+                                        <label>Seuil Gros Pickup</label>
+                                        <input type="number" id="cfg-pickup-high" value="6" min="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Seuil Petit Pickup</label>
+                                        <input type="number" id="cfg-pickup-med" value="3" min="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Multiplicateur Gros</label>
+                                        <input type="number" step="0.01" id="cfg-pickup-high-mult" value="1.10" min="0" max="3">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Multiplicateur Petit</label>
+                                        <input type="number" step="0.01" id="cfg-pickup-med-mult" value="1.05" min="0" max="3">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Exceptions Settings -->
+                        <div class="settings-section" id="section-exceptions">
+                            <h2><i class="fas fa-calendar-star"></i> Périodes d'Exception</h2>
+                            <p class="settings-description">
+                                Configurez des règles tarifaires spéciales pour les événements, salons ou manifestations.
+                                Ces paramètres s'appliqueront uniquement pendant les périodes définies.
+                            </p>
+                            
+                            <div class="exceptions-actions">
+                                <button class="btn btn-primary" onclick="app.openExceptionModal()">
+                                    <i class="fas fa-plus"></i>
+                                    Ajouter une période
+                                </button>
+                            </div>
+                            
+                            <div class="exceptions-list" id="exceptions-list">
+                                <div class="empty-state">
+                                    <i class="fas fa-calendar-times"></i>
+                                    <p>Aucunes périodes d'exception configurées</p>
+                                    <p class="text-muted">Cliquez sur "Ajouter une période" pour créer votre première exception</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aggressive Strategy Settings -->
+                        <div class="settings-section" id="section-aggressive">
+                            <h2><i class="fas fa-fire"></i> Stratégie agressive de remplissage</h2>
+                            <p class="settings-description">
+                                Activez cette stratégie pour remplir l'hôtel à tout prix lors de périodes creuses. 
+                                L'algorithme réduira automatiquement vos tarifs pour être en dessous de la concurrence 
+                                et créer un "matelas de réservations" lorsque les conditions sont défavorables.
+                            </p>
+                            
+                            <div class="aggressive-toggle">
+                                <label class="toggle-label">
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="cfg-aggressive-enabled" onchange="app.toggleAggressiveStrategy()">
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                    <div class="toggle-text">
+                                        <span class="toggle-title">Activer la stratégie agressive</span>
+                                        <span class="toggle-desc">Réduction automatique des tarifs en période creuse</span>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div class="aggressive-settings" id="aggressive-settings-panel">
+                                <div class="settings-grid">
+                                    <div class="form-group">
+                                        <label>Seuil Indice Marché (%)</label>
+                                        <div class="range-group">
+                                            <div class="range-header">
+                                                <span>Marché &lt;</span>
+                                                <span class="range-value" id="val-aggressive-market-th">30%</span>
+                                            </div>
+                                            <input type="range" class="range-slider" id="cfg-aggressive-market-th" 
+                                                   min="5" max="50" value="30" 
+                                                   oninput="app.updateRangeDisplay('cfg-aggressive-market-th', 'val-aggressive-market-th', '%')">
+                                        </div>
+                                        <small class="form-help">Quand l'indice de demande est en dessous de ce seuil</small>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Seuil Taux Occupation (%)</label>
+                                        <div class="range-group">
+                                            <div class="range-header">
+                                                <span>TO &lt;</span>
+                                                <span class="range-value" id="val-aggressive-to-th">20%</span>
+                                            </div>
+                                            <input type="range" class="range-slider" id="cfg-aggressive-to-th" 
+                                                   min="5" max="50" value="20" 
+                                                   oninput="app.updateRangeDisplay('cfg-aggressive-to-th', 'val-aggressive-to-th', '%')">
+                                        </div>
+                                        <small class="form-help">Quand le taux d'occupation est en dessous de ce seuil</small>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Seuil Lead Time (jours)</label>
+                                        <div class="range-group">
+                                            <div class="range-header">
+                                                <span>Jours avant arrivée &gt;</span>
+                                                <span class="range-value" id="val-aggressive-lt-th">45j</span>
+                                            </div>
+                                            <input type="range" class="range-slider" id="cfg-aggressive-lt-th" 
+                                                   min="14" max="90" value="45" 
+                                                   oninput="app.updateRangeDisplay('cfg-aggressive-lt-th', 'val-aggressive-lt-th', 'j')">
+                                        </div>
+                                        <small class="form-help">Réservations à plus de X jours de la date d'arrivée</small>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Réduction par rapport au concurrent le plus bas (€)</label>
+                                        <input type="number" id="cfg-aggressive-discount" value="1" min="0" max="20">
+                                        <small class="form-help">L'algorithme placera votre prix X€ sous le tarif minimum du compset</small>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Prix Minimum de Floor (€)</label>
+                                        <input type="number" id="cfg-aggressive-min-floor" value="75" min="0">
+                                        <small class="form-help">Le tarif ne descendra jamais en dessous de ce seuil</small>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Réduction Maximum Totale (%)</label>
+                                        <div class="range-group">
+                                            <div class="range-header">
+                                                <span>Max réduction</span>
+                                                <span class="range-value" id="val-aggressive-max-reduce">15%</span>
+                                            </div>
+                                            <input type="range" class="range-slider" id="cfg-aggressive-max-reduce" 
+                                                   min="5" max="40" value="15" 
+                                                   oninput="app.updateRangeDisplay('cfg-aggressive-max-reduce', 'val-aggressive-max-reduce', '%')">
+                                        </div>
+                                        <small class="form-help">Limite de réduction par rapport au prix optimal normal</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="aggressive-summary">
+                                    <div class="summary-card">
+                                        <i class="fas fa-calculator"></i>
+                                        <div class="summary-content">
+                                            <span class="summary-label">Formule de calcul active :</span>
+                                            <span class="summary-formula">Prix = Min(Concurrents) - Réduction + Floor</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Integrations Settings -->
+                        <div class="settings-section" id="section-integrations">
+                            <h2><i class="fas fa-plug"></i> Intégrations</h2>
+                            <div class="integrations-list">
+                                <div class="integration-item">
+                                    <div class="integration-icon"><i class="fas fa-cloud"></i></div>
+                                    <div class="integration-info">
+                                        <span class="integration-name">Lighthouse Analytics</span>
+                                        <span class="integration-status connected">Connecté</span>
+                                    </div>
+                                    <button class="integration-btn">Configurer</button>
+                                </div>
+                                <div class="integration-item">
+                                    <div class="integration-icon"><i class="fas fa-server"></i></div>
+                                    <div class="integration-info">
+                                        <span class="integration-name">PMS (Property Management System)</span>
+                                        <span class="integration-status">Non connecté</span>
+                                    </div>
+                                    <button class="integration-btn">Connecter</button>
+                                </div>
+                                <div class="integration-item">
+                                    <div class="integration-icon"><i class="fas fa-plug"></i></div>
+                                    <div class="integration-info">
+                                        <span class="integration-name">Channel Manager</span>
+                                        <span class="integration-status">Non connecté</span>
+                                    </div>
+                                    <button class="integration-btn">Connecter</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data Settings -->
+                        <div class="settings-section" id="section-data">
+                            <h2><i class="fas fa-database"></i> Gestion des Données</h2>
+                            
+                            <!-- Sauvegarde avec chemin configurable -->
+                            <div class="backup-section">
+                                <h3><i class="fas fa-save"></i> Sauvegarde Locale</h3>
+                                <p class="settings-description">
+                                    Configurez le chemin de sauvegarde local pour alléger le fonctionnement de l'application.
+                                    Les données seront sauvegardées dans le dossier spécifié plutôt que dans le stockage du navigateur.
+                                </p>
+                                <div class="settings-grid">
+                                    <div class="form-group">
+                                        <label>Chemin de Sauvegarde Locale</label>
+                                        <div class="path-input-group">
+                                            <input type="text" id="cfg-backup-path" placeholder="C:\Sauvegardes\YieldManager" value="">
+                                            <button class="btn btn-secondary" onclick="app.browseBackupPath()" title="Parcourir">
+                                                <i class="fas fa-folder-open"></i>
+                                            </button>
+                                        </div>
+                                        <small class="form-help">Laissez vide pour utiliser le stockage du navigateur (localStorage)</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Type de Sauvegarde</label>
+                                        <select id="cfg-backup-type">
+                                            <option value="local">Fichier Local (Téléchargement)</option>
+                                            <option value="auto">Sauvegarde Automatique</option>
+                                            <option value="manual">Sauvegarde Manuelle</option>
+                                        </select>
+                                        <small class="form-help">Sélectionnez le mode de sauvegarde souhaité</small>
+                                    </div>
+                                </div>
+                                <div class="backup-info">
+                                    <div class="storage-usage" id="storage-usage">
+                                        <span class="usage-label">Utilisation stockage navigateur:</span>
+                                        <span class="usage-value" id="storage-percent">0%</span>
+                                        <div class="usage-bar">
+                                            <div class="usage-fill" id="storage-bar" style="width: 0%"></div>
+                                        </div>
+                                        <span class="usage-size" id="storage-size">0 KB</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="data-actions">
+                                <div class="action-card">
+                                    <i class="fas fa-save"></i>
+                                    <h4>Sauvegarder</h4>
+                                    <p>Sauvegarder les données actuelles</p>
+                                    <button class="btn btn-primary" onclick="app.saveToLocal()">Sauvegarder</button>
+                                </div>
+                                <div class="action-card">
+                                    <i class="fas fa-download"></i>
+                                    <h4>Restaurer</h4>
+                                    <p>Restaurer une sauvegarde précédente</p>
+                                    <button class="btn btn-secondary" onclick="app.restoreBackup()">Restaurer</button>
+                                </div>
+                                <div class="action-card">
+                                    <i class="fas fa-trash-alt"></i>
+                                    <h4>Effacer</h4>
+                                    <p>Supprimer toutes les données locales</p>
+                                    <button class="btn btn-danger" onclick="app.clearAllData()">Effacer</button>
+                                </div>
+                                <div class="action-card">
+                                    <i class="fas fa-file-export"></i>
+                                    <h4>Exporter</h4>
+                                    <p>Exporter toutes les données au format JSON</p>
+                                    <button class="btn btn-secondary" onclick="app.exportAllData()">Exporter</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-footer">
+                        <button class="btn btn-primary" onclick="app.saveConfig(); app.recalculate();">
+                            <i class="fas fa-save"></i> Sauvegarder & Recalculer
+                        </button>
+                        <button class="btn btn-secondary" onclick="app.resetConfig()">
+                            <i class="fas fa-undo"></i> Réinitialiser
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="modal-exception">
+        <div class="modal large">
+            <div class="modal-header gradient">
+                <h3 id="exception-modal-title"><i class="fas fa-calendar-star"></i> Nouvelle Période d'Exception</h3>
+                <button class="modal-close" onclick="app.closeExceptionModal()">&times;</button>
+            </div>
+            <div class="modal-body scrollable">
+                <input type="hidden" id="exception-id">
+                
+                <div class="exception-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nom de l'événement *</label>
+                            <input type="text" id="exception-name" placeholder="Ex: Salon de l'Hôtellerie 2026" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Type d'événement</label>
+                            <select id="exception-type">
+                                <option value="salon">Salon / Exposition</option>
+                                <option value="conference">Conférence</option>
+                                <option value="festival">Festival / Événement culturel</option>
+                                <option value="sport">Événement sportif</option>
+                                <option value="autre">Autre</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date de début *</label>
+                            <input type="date" id="exception-start" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Date de fin *</label>
+                            <input type="date" id="exception-end" required>
+                        </div>
+                    </div>
+                    
+                    <div class="exception-preview" id="exception-preview">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Sélectionnez les dates pour voir l'aperçu</span>
+                    </div>
+                    
+                    <div class="exception-rules-section">
+                        <h4><i class="fas fa-sliders-h"></i> Règles tarifaires pour cette période</h4>
+                        
+                        <div class="rules-grid">
+                            <div class="rule-card">
+                                <div class="rule-header">
+                                    <i class="fas fa-tag"></i>
+                                    <span>Ajustement ADR</span>
+                                </div>
+                                <div class="rule-body">
+                                    <div class="form-group">
+                                        <label>Type d'ajustement</label>
+                                        <select id="exception-adr-type">
+                                            <option value="percentage">Pourcentage (%)</option>
+                                            <option value="fixed">Montant fixe (€)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Valeur</label>
+                                        <div class="input-with-sign">
+                                            <select id="exception-adr-direction">
+                                                <option value="increase">+</option>
+                                                <option value="decrease">-</option>
+                                            </select>
+                                            <input type="number" id="exception-adr-value" value="15" step="1">
+                                            <span class="input-suffix" id="exception-adr-suffix">%</span>
+                                        </div>
+                                    </div>
+                                    <p class="rule-example" id="exception-adr-example">Exemple : +15% sur les tarifs de base</p>
+                                </div>
+                            </div>
+                            
+                            <div class="rule-card">
+                                <div class="rule-header">
+                                    <i class="fas fa-calendar-minus"></i>
+                                    <span>Restrictions de séjour</span>
+                                </div>
+                                <div class="rule-body">
+                                    <div class="form-group">
+                                        <label>Séjour minimum (nuits)</label>
+                                        <input type="number" id="exception-min-stay" value="2" min="1" max="30">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Séjour maximum (nuits)</label>
+                                        <input type="number" id="exception-max-stay" value="14" min="1" max="90">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="rule-card">
+                                <div class="rule-header">
+                                    <i class="fas fa-ban"></i>
+                                    <span>Fermetures</span>
+                                </div>
+                                <div class="rule-body">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="exception-cta">
+                                        <span>Fermé aux arrivées (CTA)</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="exception-ctd">
+                                        <span>Fermé aux départs (CTD)</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="rule-card">
+                                <div class="rule-header">
+                                    <i class="fas fa-lock"></i>
+                                    <span>Verrouillage tarifaire</span>
+                                </div>
+                                <div class="rule-body">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="exception-lock-prices">
+                                        <span>Bloquer les modifications automatiques</span>
+                                    </label>
+                                    <p class="rule-help">Les tarifs ne seront pas modifiés par l'algorithme pendant cette période</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Notes internes</label>
+                        <textarea id="exception-notes" rows="3" placeholder="Notes optionnelles pour cette période..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeExceptionModal()">Annuler</button>
+                <button class="btn btn-primary" onclick="app.saveException()">
+                    <i class="fas fa-save"></i> Sauvegarder
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="modal-competitors">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title"><i class="fas fa-building"></i> Détails Concurrence</h3>
+                <button class="modal-close" onclick="app.closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="comp-list" id="comp-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeModal()">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-calc-detail">
+        <div class="modal large">
+            <div class="modal-header gradient">
+                <h3><i class="fas fa-calculator"></i> Analyse du Prix Suggéré</h3>
+                <button class="modal-close" onclick="app.closeCalcDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="calc-detail-body">
+                <!-- Dynamic content -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeCalcDetailModal()">Fermer</button>
+                <button class="btn btn-primary" id="apply-suggested-btn">
+                    <i class="fas fa-check"></i> Appliquer ce prix
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-competitor-detail">
+        <div class="modal">
+            <div class="modal-header gradient">
+                <h3><i class="fas fa-building"></i> Tarifs Concurrents</h3>
+                <button class="modal-close" onclick="app.closeCompetitorDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="competitor-detail-body">
+                <!-- Dynamic content -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeCompetitorDetailModal()">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-help">
+        <div class="modal large">
+            <div class="modal-header gradient">
+                <h3><i class="fas fa-book-open"></i> Aide & Documentation</h3>
+                <button class="modal-close" onclick="app.closeHelpModal()">&times;</button>
+            </div>
+            <div class="modal-body scrollable" id="help-body">
+                <!-- Dynamic content from help system -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Sélection Concurrents -->
+    <div class="modal-overlay" id="modal-competitor-selector">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-building"></i> Sélection des Concurrents</h3>
+                <button class="modal-close" onclick="app.closeCompetitorSelector()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="competitor-selector-list" id="competitor-selector-list">
+                    <!-- Dynamically generated -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeCompetitorSelector()">Annuler</button>
+                <button class="btn btn-primary" onclick="app.applyCompetitorSelection()">
+                    <i class="fas fa-check"></i> Appliquer
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Salon / Event -->
+    <div class="modal-overlay" id="modal-salon">
+        <div class="modal large">
+            <div class="modal-header gradient">
+                <h3 id="salon-modal-title"><i class="fas fa-calendar-star"></i> Nouveau Salon / Événement</h3>
+                <button class="modal-close" onclick="app.closeSalonModal()">&times;</button>
+            </div>
+            <div class="modal-body scrollable">
+                <input type="hidden" id="salon-id">
+                
+                <div class="salon-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nom du salon / événement *</label>
+                            <input type="text" id="salon-name" placeholder="Ex: Paris Air Show 2026" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Indice d'impact (1-10) *</label>
+                            <input type="number" id="salon-impact" min="1" max="10" value="5" required>
+                            <small class="form-help">1 = Impact faible, 10 = Impact majeur</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date de début *</label>
+                            <input type="date" id="salon-start" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Date de fin *</label>
+                            <input type="date" id="salon-end" required>
+                        </div>
+                    </div>
+                    
+                    <div class="salon-impact-preview" id="salon-impact-preview">
+                        <div class="impact-indicator" id="impact-indicator">
+                            <span class="impact-dot"></span>
+                            <span class="impact-label">Impact Moyen</span>
+                        </div>
+                    </div>
+                    
+                    <div class="salon-rules-section">
+                        <h4><i class="fas fa-sliders-h"></i> Règles tarifaires pour cet événement</h4>
+                        
+                        <div class="rules-grid">
+                            <div class="rule-card">
+                                <div class="rule-header">
+                                    <i class="fas fa-tag"></i>
+                                    <span>Ajustement ADR</span>
+                                </div>
+                                <div class="rule-body">
+                                    <div class="form-group">
+                                        <label>Type d'ajustement</label>
+                                        <select id="salon-adr-type">
+                                            <option value="percentage">Pourcentage (%)</option>
+                                            <option value="fixed">Montant fixe (€)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Valeur</label>
+                                        <div class="input-with-sign">
+                                            <select id="salon-adr-direction">
+                                                <option value="increase">+</option>
+                                                <option value="decrease">-</option>
+                                            </select>
+                                            <input type="number" id="salon-adr-value" value="20" step="1">
+                                            <span class="input-suffix" id="salon-adr-suffix">%</span>
+                                        </div>
+                                    </div>
+                                    <p class="rule-example" id="salon-adr-example">Exemple : +20% sur les tarifs de base</p>
+                                </div>
+                            </div>
+                            
+                            <div class="rule-card">
+                                <div class="rule-header">
+                                    <i class="fas fa-calendar-minus"></i>
+                                    <span>Restrictions de séjour</span>
+                                </div>
+                                <div class="rule-body">
+                                    <div class="form-group">
+                                        <label>Séjour minimum (nuits)</label>
+                                        <input type="number" id="salon-min-stay" value="2" min="1" max="30">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Séjour maximum (nuits)</label>
+                                        <input type="number" id="salon-max-stay" value="14" min="1" max="90">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="rule-card">
+                                <div class="rule-header">
+                                    <i class="fas fa-ban"></i>
+                                    <span>Fermetures</span>
+                                </div>
+                                <div class="rule-body">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="salon-cta">
+                                        <span>Fermé aux arrivées (CTA)</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="salon-ctd">
+                                        <span>Fermé aux départs (CTD)</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="rule-card">
+                                <div class="rule-header">
+                                    <i class="fas fa-lock"></i>
+                                    <span>Verrouillage tarifaire </div>
+                               </span>
+                                <div class="rule-body">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="salon-lock-prices">
+                                        <span>Bloquer les modifications automatiques</span>
+                                    </label>
+                                    <p class="rule-help">Les tarifs ne seront pas modifiés par l'algorithme pendant cette période</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Notes internes</label>
+                        <textarea id="salon-notes" rows="3" placeholder="Notes optionnelles pour cet événement..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeSalonModal()">Annuler</button>
+                <button class="btn btn-primary" onclick="app.saveSalon()">
+                    <i class="fas fa-save"></i> Sauvegarder
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts (Defer pour s'assurer que le HTML est chargé avant le JS) -->
+    <script src="utils.js" defer></script>
+    <script src="app.js" defer></script>
+</body>
+</html>
