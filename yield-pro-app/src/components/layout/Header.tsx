@@ -1,58 +1,84 @@
 import React from 'react'
 import { Bell, Search, Calendar as CalendarIcon } from 'lucide-react'
-import DatePicker from 'react-datepicker'
-import "react-datepicker/dist/react-datepicker.css"
 import { useAuthStore } from '../../store/useAuthStore'
 
 interface HeaderProps {
     startDate: Date | null
     endDate: Date | null
-    onDateChange: (dates: [Date | null, Date | null]) => void
+    onStartDateChange: (date: Date) => void
+    onEndDateChange: (date: Date) => void
 }
 
-export const Header: React.FC<HeaderProps> = ({ startDate, endDate, onDateChange }) => {
+const toInputDate = (date: Date | null) => {
+    if (!date) return ''
+    const yyyy = date.getFullYear()
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const dd = String(date.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+}
+
+const parseInputDate = (value: string) => {
+    const [y, m, d] = value.split('-').map(Number)
+    return new Date(y, (m || 1) - 1, d || 1)
+}
+
+export const Header: React.FC<HeaderProps> = ({ startDate, endDate, onStartDateChange, onEndDateChange }) => {
     const { profile } = useAuthStore()
+    const effectiveStart = startDate || new Date()
+    const effectiveEnd = endDate || new Date()
 
     return (
-        <header className="h-16 bg-slate-950 border-b border-white/10 flex items-center justify-between px-8 sticky top-0 z-10 text-white shadow-2xl">
-            <div className="flex items-center gap-6 flex-grow max-w-2xl">
-                <div className="relative flex-grow">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200 bg-white/85 px-8 backdrop-blur-xl">
+            <div className="flex max-w-5xl flex-1 items-center gap-4">
+                <div className="relative w-full">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <input
                         type="text"
-                        placeholder="Rechercher une date, une réservation..."
-                        className="w-full pl-10 pr-4 py-2 bg-white/10 border-none rounded-lg text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-primary/40 outline-none transition-all"
+                        placeholder="Rechercher une date, une reservation, un segment..."
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
                     />
                 </div>
 
-                <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1.5 border border-white/10">
-                    <CalendarIcon className="w-4 h-4 text-slate-400" />
-                    <DatePicker
-                        selectsRange={true}
-                        startDate={startDate ?? undefined}
-                        endDate={endDate ?? undefined}
-                        onChange={(update: [Date | null, Date | null]) => onDateChange(update)}
-                        className="bg-transparent border-none text-sm w-48 outline-none cursor-pointer text-white"
-                        placeholderText="Sélect. période"
-                        dateFormat="dd/MM/yyyy"
-                    />
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                    <CalendarIcon className="h-4 w-4 text-slate-500" />
+                    <div className="flex items-center gap-3">
+                        <label className="text-[11px] font-bold text-slate-500">
+                            Date debut
+                            <input
+                                type="date"
+                                value={toInputDate(effectiveStart)}
+                                onChange={(e) => onStartDateChange(parseInputDate(e.target.value))}
+                                className="mt-1 block w-[145px] rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700"
+                            />
+                        </label>
+                        <label className="text-[11px] font-bold text-slate-500">
+                            Date fin
+                            <input
+                                type="date"
+                                value={toInputDate(effectiveEnd)}
+                                min={toInputDate(effectiveStart)}
+                                onChange={(e) => onEndDateChange(parseInputDate(e.target.value))}
+                                className="mt-1 block w-[145px] rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700"
+                            />
+                        </label>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
-                <button className="p-2 hover:bg-white/10 rounded-full relative transition-colors">
-                    <Bell className="w-5 h-5 text-slate-300" />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-slate-950"></span>
+            <div className="ml-6 flex items-center gap-4">
+                <button className="relative rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 hover:bg-slate-50">
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500" />
                 </button>
 
-                <div className="flex items-center gap-3 pl-4 border-l border-white/10">
+                <div className="flex items-center gap-3 rounded-xl bg-slate-900 px-3 py-2 text-white">
                     <div className="text-right">
-                        <p className="text-sm font-bold text-white leading-tight">{profile?.full_name}</p>
-                        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black leading-none mt-1">
-                            {profile?.role === 'admin' ? 'Strategic Admin' : 'Yield Manager'}
+                        <p className="text-sm font-bold leading-tight">{profile?.full_name || 'Utilisateur'}</p>
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-slate-300">
+                            {profile?.role === 'admin' ? 'Admin RMS' : 'Yield Manager'}
                         </p>
                     </div>
-                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black border-2 border-white/20 shadow-lg cursor-pointer hover:scale-105 transition-all">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm font-black text-slate-900">
                         {profile?.full_name?.charAt(0) || 'U'}
                     </div>
                 </div>

@@ -2,6 +2,9 @@ import React, { useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/useAuthStore'
 import type { Session } from '@supabase/supabase-js'
+import type { Database } from '../../types/database.types'
+
+type UserProfile = Database['public']['Tables']['user_profiles']['Row']
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { setUser, setProfile } = useAuthStore()
@@ -22,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         .maybeSingle();
 
                     if (isMounted && data) {
-                        setProfile(data as any);
+                        setProfile(data as UserProfile);
                     }
                 } else {
                     setUser(null);

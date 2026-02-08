@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
     LayoutDashboard,
@@ -10,7 +10,12 @@ import {
     TrendingUp,
     ShieldCheck,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Workflow,
+    CalendarDays,
+    Calculator,
+    BookOpen,
+    Lock
 } from 'lucide-react'
 import { useAuthStore } from '../../store/useAuthStore'
 
@@ -23,46 +28,56 @@ export const Sidebar: React.FC = () => {
         { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
         { icon: Table, label: 'Grille Tarifaire', path: '/grid' },
         { icon: BarChart3, label: 'Concurrence', path: '/competitors' },
-        { icon: TrendingUp, label: 'Analyses Yield', path: '/yield' },
+        { icon: Workflow, label: 'Analyses Yield', path: '/yield' },
+        { icon: CalendarDays, label: 'Calendrier Arrivées', path: '/calendar-arrivals' },
+        { icon: Lock, label: 'Mes indisponibilités', path: '/mes-indisponibilites' },
+        { icon: Calculator, label: 'Simulateur', path: '/reservation-simulator' },
+        { icon: BookOpen, label: 'Aide Générale', path: '/help-general', highlight: true },
+        { icon: BookOpen, label: 'Aide Calibrage', path: '/help-calibrage', highlight: true },
         { icon: History, label: 'Historique', path: '/history' },
-        { icon: Settings, label: 'Paramètres', path: '/settings' },
+        { icon: Settings, label: 'Studio RMS', path: '/settings' },
     ]
 
     const isAdmin = profile?.role === 'admin'
 
     return (
-        <div className={`h-screen flex flex-col bg-slate-900 border-r border-white/10 transition-all duration-300 text-slate-300 shadow-2xl ${collapsed ? 'w-20' : 'w-64'}`}>
-            <div className="p-6 flex items-center justify-between border-b border-white/10 bg-slate-950">
+        <aside className={`h-screen flex flex-col border-r border-slate-200 bg-white/90 backdrop-blur-xl transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'}`}>
+            <div className="flex items-center justify-between border-b border-slate-200 p-5">
                 {!collapsed && (
-                    <div className="flex items-center gap-2">
-                        <div className="p-2 bg-primary rounded-lg text-primary-foreground shadow-lg shadow-primary/20">
-                            <TrendingUp className="w-5 h-5" />
+                    <div className="flex items-center gap-3">
+                        <div className="rounded-xl bg-slate-900 p-2 text-white">
+                            <TrendingUp className="h-5 w-5" />
                         </div>
-                        <span className="font-black text-xl tracking-tighter text-white">YieldPro</span>
+                        <div>
+                            <p className="text-lg font-black tracking-tight text-slate-900">YieldPro</p>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Revenue OS</p>
+                        </div>
                     </div>
                 )}
                 <button
                     onClick={() => setCollapsed(!collapsed)}
-                    className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 ml-auto transition-colors"
+                    className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100"
                 >
-                    {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                    {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
                 </button>
             </div>
 
-            <nav className="flex-grow p-4 space-y-2 mt-4">
+            <nav className="flex-1 space-y-2 p-4">
                 {menuItems.map((item) => {
                     const isActive = location.pathname === item.path
                     return (
                         <Link
                             key={item.path}
                             to={item.path}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${isActive
-                                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
-                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                            className={`group flex items-center gap-3 rounded-xl px-3 py-3 transition ${isActive
+                                ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
+                                : item.highlight
+                                    ? 'text-cyan-700 bg-cyan-50 hover:bg-cyan-100'
+                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                                 }`}
                         >
-                            <item.icon className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-white' : ''}`} />
-                            {!collapsed && <span className="font-bold tracking-tight text-sm">{item.label}</span>}
+                            <item.icon className="h-5 w-5 shrink-0" />
+                            {!collapsed && <span className="text-sm font-bold tracking-tight">{item.label}</span>}
                         </Link>
                     )
                 })}
@@ -70,40 +85,32 @@ export const Sidebar: React.FC = () => {
                 {isAdmin && (
                     <Link
                         to="/admin"
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all mt-8 group ${location.pathname === '/admin'
-                            ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25'
-                            : 'text-slate-400 hover:bg-rose-500/10 hover:text-rose-500'
+                        className={`mt-6 flex items-center gap-3 rounded-xl px-3 py-3 transition ${location.pathname === '/admin'
+                            ? 'bg-rose-600 text-white shadow-lg shadow-rose-500/25'
+                            : 'text-rose-600 hover:bg-rose-50'
                             }`}
                     >
-                        <ShieldCheck className="w-5 h-5 flex-shrink-0 group-hover:rotate-12 transition-transform" />
-                        {!collapsed && <span className="font-bold tracking-tight text-sm">Strategic Admin</span>}
+                        <ShieldCheck className="h-5 w-5 shrink-0" />
+                        {!collapsed && <span className="text-sm font-bold tracking-tight">Admin</span>}
                     </Link>
                 )}
             </nav>
 
-            <div className="p-4 border-t border-white/10 mt-auto bg-slate-950/50">
+            <div className="border-t border-slate-200 p-4">
                 {!collapsed && (
-                    <div className="mb-4 px-2">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Authenticated User</p>
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs font-bold text-white uppercase">
-                                {profile?.full_name?.charAt(0)}
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-sm font-bold text-white truncate leading-tight">{profile?.full_name || 'Utilisateur'}</p>
-                                <p className="text-[10px] text-slate-500 truncate mt-0.5">{profile?.email}</p>
-                            </div>
-                        </div>
+                    <div className="mb-4 rounded-xl bg-slate-50 p-3">
+                        <p className="text-xs font-black text-slate-900">{profile?.full_name || 'Utilisateur'}</p>
+                        <p className="mt-1 text-[11px] text-slate-500">{profile?.email}</p>
                     </div>
                 )}
                 <button
                     onClick={() => signOut()}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-white/5 hover:text-rose-400 rounded-lg transition-all group"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-slate-600 transition hover:bg-slate-100 hover:text-rose-600"
                 >
-                    <LogOut className="w-5 h-5 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
-                    {!collapsed && <span className="font-bold tracking-tight text-sm">Sign Out</span>}
+                    <LogOut className="h-5 w-5 shrink-0" />
+                    {!collapsed && <span className="text-sm font-bold">Déconnexion</span>}
                 </button>
             </div>
-        </div>
+        </aside>
     )
 }

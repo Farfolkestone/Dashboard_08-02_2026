@@ -2,6 +2,7 @@ import React from 'react'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { useDateRangeStore } from '../../store/useDateRangeStore'
+import { addDays } from 'date-fns'
 
 interface DashboardLayoutProps {
     children: React.ReactNode
@@ -17,10 +18,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 <Header
                     startDate={startDate}
                     endDate={endDate}
-                    onDateChange={(dates: [Date | null, Date | null]) => {
-                        if (dates[0] && dates[1]) {
-                            setDateRange(dates[0], dates[1])
-                        }
+                    onStartDateChange={(nextStart: Date) => {
+                        const safeEnd = endDate && endDate >= nextStart ? endDate : addDays(nextStart, 1)
+                        setDateRange(nextStart, safeEnd)
+                    }}
+                    onEndDateChange={(nextEnd: Date) => {
+                        const safeStart = startDate && startDate <= nextEnd ? startDate : nextEnd
+                        setDateRange(safeStart, nextEnd)
                     }}
                 />
                 <main className="flex-grow overflow-y-auto p-8">

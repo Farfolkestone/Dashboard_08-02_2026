@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
     Area,
     XAxis,
@@ -12,14 +12,19 @@ import {
 import { MoreVertical } from 'lucide-react'
 
 interface YieldChartProps {
-    data: any[]
+    data: Array<{
+        date: string
+        price: number
+        market: number
+        demand: number
+    }>
 }
 
 export const YieldChart: React.FC<YieldChartProps> = ({ data }) => {
-    // Generate some dummy compset data if not present to show the range effect
+    // Deterministic recommendation to keep render pure and predictable.
     const chartData = data.map(d => ({
         ...d,
-        recommendation: d.price * (1 + (Math.random() * 0.2 - 0.05)),
+        recommendation: d.price * (1 + Math.min(0.15, Math.max(-0.05, d.demand * 0.002 - 0.02))),
         compHigh: d.market * 1.25,
         compLow: d.market * 0.85
     }))
@@ -36,8 +41,8 @@ export const YieldChart: React.FC<YieldChartProps> = ({ data }) => {
                 </div>
             </div>
 
-            <div className="h-[400px] w-full min-w-0">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[400px] w-full min-w-0 min-h-[320px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={320}>
                     <ComposedChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f0f0f0" />
 

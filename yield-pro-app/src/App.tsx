@@ -7,11 +7,16 @@ import { DashboardLayout } from './components/layout/DashboardLayout'
 import { DashboardContent } from './components/dashboard/DashboardContent'
 import { AdminPanel } from './components/admin/AdminPanel'
 import { PricingGrid } from './components/grid/PricingGrid'
+import { RMSSettingsPage } from './components/settings/RMSSettingsPage'
+import { CalendarInsightsPage } from './components/pages/CalendarInsightsPage'
+import { ReservationSimulatorPage } from './components/pages/ReservationSimulatorPage'
+import { HelpCalibrationPage } from './components/pages/HelpCalibrationPage'
+import { HelpGeneralPage } from './components/pages/HelpGeneralPage'
+import { YieldAnalysisPage } from './components/pages/YieldAnalysisPage'
+import { MyUnavailabilityPage } from './components/pages/MyUnavailabilityPage'
 import {
   CompetitorsPage,
-  YieldAnalysisPage,
-  HistoryPage,
-  SettingsPage
+  HistoryPage
 } from './components/pages/PlaceholderPages'
 import { Loader2 } from 'lucide-react'
 
@@ -105,10 +110,50 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/calendar-arrivals" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <CalendarInsightsPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/mes-indisponibilites" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <MyUnavailabilityPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/reservation-simulator" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <ReservationSimulatorPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/help-calibrage" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <HelpCalibrationPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/help-general" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <HelpGeneralPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/settings" element={
             <ProtectedRoute>
               <DashboardLayout>
-                <SettingsPage />
+                <RMSSettingsPage />
               </DashboardLayout>
             </ProtectedRoute>
           } />

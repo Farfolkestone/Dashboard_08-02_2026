@@ -10,28 +10,32 @@ import {
     UserX,
     Hotel
 } from 'lucide-react'
+import type { Database } from '../../types/database.types'
+
+type UserProfile = Database['public']['Tables']['user_profiles']['Row']
+type HotelRow = Database['public']['Tables']['hotels']['Row']
 
 export const AdminPanel: React.FC = () => {
     const { data: users, isLoading } = useQuery({
         queryKey: ['admin-users'],
-        queryFn: async () => {
+        queryFn: async (): Promise<UserProfile[]> => {
             const { data, error } = await supabase
                 .from('user_profiles')
                 .select('*')
                 .order('created_at', { ascending: false })
             if (error) throw error
-            return data
+            return (data ?? []) as UserProfile[]
         }
     })
 
     const { data: hotels } = useQuery({
         queryKey: ['admin-hotels'],
-        queryFn: async () => {
+        queryFn: async (): Promise<HotelRow[]> => {
             const { data, error } = await supabase
                 .from('hotels')
                 .select('*')
             if (error) throw error
-            return data
+            return (data ?? []) as HotelRow[]
         }
     })
 
