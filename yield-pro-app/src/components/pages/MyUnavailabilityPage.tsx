@@ -236,7 +236,7 @@ const getStayNights = (row: ReservationLike, arrivalDate: Date): number => {
 
   const fallbackNights = Object.entries(row).find(([k]) => {
     const n = normalize(k)
-    return n.includes('nuitees') || n === 'nuits' || n.includes('nights')
+    return n.includes('nuitees') || n.includes('nuites') || n.includes('nuit') || n.includes('nights')
   })
   if (fallbackNights) {
     const parsed = parseNumber(fallbackNights[1])
@@ -250,6 +250,52 @@ const getStayNights = (row: ReservationLike, arrivalDate: Date): number => {
   }
 
   return 1
+}
+
+const getStayDateKeys = (row: ReservationLike): string[] => {
+  const arrivalDateKey = getArrivalDateKey(row)
+  if (!arrivalDateKey) return []
+  const arrivalDate = parseDate(arrivalDateKey)
+  if (!arrivalDate) return []
+
+  const nights = getStayNights(row, arrivalDate)
+  const dateKeys: string[] = []
+  for (let i = 0; i < nights; i += 1) {
+    dateKeys.push(toDateKey(addDays(arrivalDate, i)))
+  }
+  return dateKeys
+}
+
+const getReservationReference = (row: ReservationLike) => toText(row['Référence'] ?? row.reference, '')
+const getReservationStatus = (row: ReservationLike) => toText(row.Etat ?? row.status, '')
+
+const getReservationDedupKey = (row: ReservationLike): string => {
+  const arrival = getArrivalDateKey(row)
+  const roomType = normalize(getRoomType(row) || '')
+  const reference = normalize(getReservationReference(row))
+  const status = normalize(getReservationStatus(row))
+  const soldRooms = getSoldRoomsCount(row)
+  const stayDates = getStayDateKeys(row)
+  const nights = stayDates.length
+
+  // Prefer reservation reference when available; fallback to a composite signature.
+  if (reference) {
+    return `${reference}|${arrival}|${roomType}|${soldRooms}|${nights}|${status}`
+  }
+
+  const guest = normalize(
+    toText(
+      row['E-Mail'] ??
+        row.email ??
+        row['Nom'] ??
+        row.nom ??
+        row['Prénom'] ??
+        row.prenom,
+      '',
+    ),
+  )
+
+  return `${arrival}|${roomType}|${soldRooms}|${nights}|${status}|${guest}`
 }
 
 const inRange = (dateKey: string, startKey: string, endKey: string) => dateKey >= startKey && dateKey <= endKey
@@ -288,30 +334,40 @@ export const MyUnavailabilityPage: React.FC = () => {
   const rangeEndKey = toDateKey(rangeEndDate)
 
   const soldByDateType = useMemo(() => {
+    const deduped = new Map<string, ReservationLike>()
+    ;(reservations as ReservationLike[]).forEach((row) => {
+      const key = getReservationDedupKey(row)
+      if (!key) return
+      if (!deduped.has(key)) deduped.set(key, row)
+    })
+
     const map = new Map<string, number>()
-    ;(reservations as ReservationLike[])
+    Array.from(deduped.values())
       .filter((row) => includeCancelled || !isCancelled(row))
       .forEach((row) => {
-        const arrivalDateKey = getArrivalDateKey(row)
-        if (!arrivalDateKey) return
-        const arrivalDate = parseDate(arrivalDateKey)
-        if (!arrivalDate) return
+        const stayDateKeys = getStayDateKeys(row)
+        if (stayDateKeys.length === 0) return
         const roomType = getRoomType(row)
         if (!roomType) return
-        const nights = getStayNights(row, arrivalDate)
         const soldRooms = getSoldRoomsCount(row)
-        for (let i = 0; i < nights; i += 1) {
-          const stayDateKey = toDateKey(addDays(arrivalDate, i))
+        stayDateKeys.forEach((stayDateKey) => {
           const key = `${stayDateKey}::${normalize(roomType)}`
           map.set(key, (map.get(key) || 0) + soldRooms)
-        }
+        })
       })
     return map
   }, [includeCancelled, reservations])
 
   const bookingDetailsByDateType = useMemo(() => {
+    const deduped = new Map<string, ReservationLike>()
+    ;(reservations as ReservationLike[]).forEach((row) => {
+      const key = getReservationDedupKey(row)
+      if (!key) return
+      if (!deduped.has(key)) deduped.set(key, row)
+    })
+
     const map = new Map<string, ReservationDetail[]>()
-    ;(reservations as ReservationLike[])
+    Array.from(deduped.values())
       .filter((row) => includeCancelled || !isCancelled(row))
       .forEach((row, idx) => {
       const arrivalDateKey = getArrivalDateKey(row)
@@ -322,6 +378,8 @@ export const MyUnavailabilityPage: React.FC = () => {
       if (!roomType) return
 
       const nights = getStayNights(row, arrivalDate)
+      const stayDateKeys = getStayDateKeys(row)
+      if (stayDateKeys.length === 0) return
       const soldRooms = getSoldRoomsCount(row)
       const departureDate = addDays(arrivalDate, Math.max(nights, 1))
       const reference = toText(row['Référence'] ?? row.reference)
@@ -364,13 +422,12 @@ export const MyUnavailabilityPage: React.FC = () => {
         montantTotal: parseNumber(montantRaw),
       }
 
-      for (let i = 0; i < nights; i += 1) {
-        const stayDateKey = toDateKey(addDays(arrivalDate, i))
+      stayDateKeys.forEach((stayDateKey) => {
         const key = `${stayDateKey}::${normalize(roomType)}`
         const list = map.get(key) || []
         list.push(detail)
         map.set(key, list)
-      }
+      })
     })
     return map
   }, [includeCancelled, reservations])
@@ -554,7 +611,7 @@ export const MyUnavailabilityPage: React.FC = () => {
             <Lock className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-3xl font-black tracking-tight text-slate-900">Mes indisponibilités</h2>
+            <h2 className="text-3xl font-black tracking-tight text-slate-900">Inventaire et Dispos.</h2>
             <p className="text-sm text-slate-500">Types de chambres fermés à la vente et chambres vendues par nuitée de séjour.</p>
           </div>
         </div>

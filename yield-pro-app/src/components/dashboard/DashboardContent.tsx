@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+﻿import React, { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -61,24 +61,24 @@ type BusinessSignal = {
 }
 
 const ARRIVAL_ALIASES = [
-  "Date d'arrivée",
-  "Date d’arrivee",
-  "Date d'arrivee",
   "Date d'arrivÃ©e",
+  "Date dâ€™arrivee",
+  "Date d'arrivee",
   "Date d'arrivÃƒÂ©e",
-  "Date d'arrivÃƒÆ’Ã‚Â©e"
+  "Date d'arrivÃƒÆ’Ã‚Â©e",
+  "Date d'arrivÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e"
 ]
 
 const PURCHASE_ALIASES = [
   "Date d'achat",
-  "Date d’achat",
+  "Date dâ€™achat",
   "Date d\u0027achat"
 ]
 
 const CANCELLATION_ALIASES = [
   "Date d'annulation",
-  "Date d’annulation",
   "Date dâ€™annulation",
+  "Date dÃ¢â‚¬â„¢annulation",
   "Date d'annul"
 ]
 
@@ -107,7 +107,7 @@ const toDemandPercent = (rawValue: number) => {
 
 const getApercuDemandPercent = (entry: BookingApercuLike) => {
   const row = entry as Record<string, unknown>
-  const rawDemand = entry.market_demand ?? pickNumber(row, ['Demande du marché', 'Demande du marche', 'Demande du marchÃ©', 'Demande du marchÃƒÂ©'])
+  const rawDemand = entry.market_demand ?? pickNumber(row, ['Demande du marchÃ©', 'Demande du marche', 'Demande du marchÃƒÂ©', 'Demande du marchÃƒÆ’Ã‚Â©'])
   return toDemandPercent(rawDemand)
 }
 
@@ -138,6 +138,45 @@ const isCancelledStatus = (status: string) => {
   return lower.includes('annul') || lower.includes('cancel')
 }
 
+const normalizeText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase()
+
+const getStayDateKeys = (row: Record<string, unknown>) => {
+  const arrivalRaw =
+    (typeof row.arrival_date === 'string' ? row.arrival_date : '') ||
+    pickString(row, ARRIVAL_ALIASES)
+  const arrival = normalizeDate(arrivalRaw)
+  if (!arrival) return []
+
+  const nightsRaw = pickNumber(row, ['Nuits', 'Nuitees', 'NuitÃ©es'])
+  let nights = nightsRaw > 0 ? Math.floor(nightsRaw) : 0
+
+  if (nights <= 0) {
+    const departureRaw =
+      (typeof row.departure_date === 'string' ? row.departure_date : '') ||
+      pickString(row, ['Date de dÃ©part', 'Date de depart', 'departure_date'])
+    const departure = normalizeDate(departureRaw)
+    if (departure) {
+      const diff = Math.round((departure.getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24))
+      nights = diff > 0 ? diff : 1
+    }
+  }
+
+  if (nights <= 0) nights = 1
+
+  const keys: string[] = []
+  for (let i = 0; i < nights; i += 1) {
+    const d = new Date(arrival)
+    d.setDate(arrival.getDate() + i)
+    keys.push(toDateKey(d))
+  }
+  return keys
+}
+
 const eventToneClass = (tone: BusinessSignal['tone']) => {
   if (tone === 'rose') return 'border-rose-200 bg-rose-50 text-rose-800'
   if (tone === 'cyan') return 'border-cyan-200 bg-cyan-50 text-cyan-800'
@@ -158,7 +197,7 @@ const getBusinessAlertExplanation = (message: string) => {
   if (lower.includes('compset') || lower.includes('mediane')) {
     return "Votre positionnement prix face au compset peut reduire soit le volume, soit la valeur. Recalibrez l'ecart prix cible pour la date concernee."
   }
-  if (lower.includes('evenement') || lower.includes('événement')) {
+  if (lower.includes('evenement') || lower.includes('Ã©vÃ©nement')) {
     return "Un evenement local peut accelerer ou ralentir les reservations. Ajustez restrictions, disponibilites et vitesse d'augmentation tarifaire."
   }
   if (lower.includes('pickup')) {
@@ -237,21 +276,52 @@ export const DashboardContent: React.FC = () => {
     })
   }
 
-  const chartData = useMemo(() => {
-    if (!apercu || !Array.isArray(apercu)) return []
+  const chartSource = useMemo<'booking_apercu' | 'fallback_rms' | 'empty'>(() => {
+    const hasApercu = Array.isArray(apercu) && apercu.length > 0
+    if (hasApercu) return 'booking_apercu'
+    if (dailyDecisions.length > 0 || pricingSuggestions.length > 0) return 'fallback_rms'
+    return 'empty'
+  }, [apercu, dailyDecisions.length, pricingSuggestions.length])
 
-    return apercu.map((entry) => {
+  const chartData = useMemo(() => {
+    const fromApercu = (apercu || []).map((entry) => {
       const day = entry as BookingApercuLike
       const row = day as Record<string, unknown>
+      const rawDate = day.date || day.Date || ''
+      const parsed = normalizeDate(rawDate)
 
       return {
-        date: formatShortDate(day.date || day.Date || ''),
-        price: day.own_price ?? pickNumber(row, ['Votre hôtel le plus bas', 'Votre hÃ´tel le plus bas']),
-        market: day.compset_median ?? pickNumber(row, ['médiane du compset', 'mÃ©diane du compset']),
-        demand: getApercuDemandPercent(day)
+        date: parsed ? format(parsed, 'dd MMM', { locale: fr }) : formatShortDate(rawDate),
+        price: day.own_price ?? pickNumber(row, ['Votre hôtel le plus bas', 'Votre hÃ´tel le plus bas', 'Votre hÃƒÂ´tel le plus bas']),
+        market: day.compset_median ?? pickNumber(row, ['médiane du compset', 'mÃ©diane du compset', 'mÃƒÂ©diane du compset']),
+        demand: getApercuDemandPercent(day),
+      }
+    }).filter((row) => Number.isFinite(row.price) && Number.isFinite(row.market))
+
+    if (fromApercu.length > 0) return fromApercu
+
+    const fromDecisions = dailyDecisions.map((d) => {
+      const parsed = normalizeDate(d.date)
+      return {
+        date: parsed ? format(parsed, 'dd MMM', { locale: fr }) : d.date,
+        price: d.currentPrice,
+        market: d.competitorMedian,
+        demand: d.demandIndex,
+      }
+    }).filter((row) => Number.isFinite(row.price) && Number.isFinite(row.market))
+
+    if (fromDecisions.length > 0) return fromDecisions
+
+    return pricingSuggestions.slice(0, 30).map((s) => {
+      const parsed = normalizeDate(s.date)
+      return {
+        date: parsed ? format(parsed, 'dd MMM', { locale: fr }) : s.date,
+        price: s.currentPrice,
+        market: s.suggestedPrice,
+        demand: 50,
       }
     })
-  }, [apercu])
+  }, [apercu, dailyDecisions, pricingSuggestions])
 
   const scorecardData = useMemo(() => ({
     roomNights: {
@@ -305,11 +375,11 @@ export const DashboardContent: React.FC = () => {
     }
 
     const parsed = (events as Array<Record<string, unknown>>).map((row, idx) => {
-      const name = pickString(row, ['Événement', 'Ã‰vÃ©nement', 'event', 'name']) || `Événement ${idx + 1}`
+      const name = pickString(row, ['Ã‰vÃ©nement', 'Ãƒâ€°vÃƒÂ©nement', 'event', 'name']) || `Evenement ${idx + 1}`
       const advice = pickString(row, ['Conseils yield', 'Pourquoi cet indice', 'advice']) || 'Ajuster progressivement le prix et surveiller le pickup.'
       const impact10 = pickNumber(row, ['Indice impact attendu sur la demande /10'])
       const impact = Math.max(0, Math.min(100, impact10 * 10))
-      const startRaw = pickString(row, ['Début', 'DÃ©but', 'start_date'])
+      const startRaw = pickString(row, ['DÃ©but', 'DÃƒÂ©but', 'start_date'])
       const endRaw = pickString(row, ['Fin', 'end_date']) || startRaw
       const startDate = normalizeDate(startRaw)
       const endDate = normalizeDate(endRaw)
@@ -556,14 +626,14 @@ export const DashboardContent: React.FC = () => {
 
     competitorRates.forEach((row) => {
       const record = row as Record<string, unknown>
-      const ownPrice = pickNumber(record, ['Folkestone Opéra', 'Folkestone OpÃ©ra'])
+      const ownPrice = pickNumber(record, ['Folkestone OpÃ©ra', 'Folkestone OpÃƒÂ©ra'])
       if (!ownPrice) return
 
       let competitorSum = 0
       let competitorCount = 0
 
       Object.entries(record).forEach(([key, value]) => {
-        if (['id', 'hotel_id', 'date_mise_a_jour', 'Jour', 'Date', 'Demande du marché', 'Demande du marchÃ©', 'Folkestone Opéra', 'Folkestone OpÃ©ra'].includes(key)) return
+        if (['id', 'hotel_id', 'date_mise_a_jour', 'Jour', 'Date', 'Demande du marchÃ©', 'Demande du marchÃƒÂ©', 'Folkestone OpÃ©ra', 'Folkestone OpÃƒÂ©ra'].includes(key)) return
         const parsed = typeof value === 'number' ? value : (typeof value === 'string' ? Number(value) : NaN)
         if (!Number.isNaN(parsed) && parsed > 0) {
           competitorSum += parsed
@@ -594,6 +664,22 @@ export const DashboardContent: React.FC = () => {
     )
   }, [competitorRates, competitorRatesVs3j, competitorRatesVs7j])
 
+  const chartUpdatedAt = useMemo<string | null>(() => {
+    if (!competitorRates || competitorRates.length === 0) return null
+
+    let latestTs = 0
+    ;(competitorRates as Array<Record<string, unknown>>).forEach((row) => {
+      const raw = row.date_mise_a_jour
+      if (typeof raw !== 'string' || !raw.trim()) return
+      const parsed = new Date(raw)
+      const ts = parsed.getTime()
+      if (Number.isNaN(ts)) return
+      if (ts > latestTs) latestTs = ts
+    })
+
+    return latestTs > 0 ? new Date(latestTs).toISOString() : null
+  }, [competitorRates])
+
   const marketTrendCoverage = useMemo(() => {
     const totalDays = competitorTrend.series.length
     const ratio3j = totalDays > 0 ? competitorTrend.summary.comparedDays3j / totalDays : 0
@@ -612,6 +698,65 @@ export const DashboardContent: React.FC = () => {
     })
     return map
   }, [bookingExport])
+
+  const eventsByDateForCalendar = useMemo(() => {
+    const map: Record<string, number> = {}
+    ;(events || []).forEach((eventRow) => {
+      const row = eventRow as EventRow & Record<string, unknown>
+      const start = normalizeDate(pickString(row, ['DÃƒÂ©but', 'DÃ©but', 'start_date']))
+      const end = normalizeDate(pickString(row, ['Fin', 'end_date'])) || start
+      if (!start || !end) return
+
+      const cur = new Date(start)
+      cur.setHours(0, 0, 0, 0)
+      const last = new Date(end)
+      last.setHours(0, 0, 0, 0)
+      while (cur <= last) {
+        const key = toDateKey(cur)
+        map[key] = (map[key] || 0) + 1
+        cur.setDate(cur.getDate() + 1)
+      }
+    })
+    return map
+  }, [events])
+
+  const roomTypeOverbookingAlerts = useMemo(() => {
+    const configured = Object.entries(config.rms.roomTypeCapacities || {})
+      .filter(([type, capacity]) => type.trim() && capacity > 0)
+      .map(([type, capacity]) => ({ type, capacity, norm: normalizeText(type) }))
+    if (configured.length === 0 || !bookingExport || bookingExport.length === 0) return []
+
+    const soldByDateType = new Map<string, number>()
+    ;(bookingExport as Array<Record<string, unknown>>).forEach((row) => {
+      const status = typeof row.Etat === 'string' ? row.Etat : ''
+      if (isCancelledStatus(status)) return
+      const roomTypeRaw = pickString(row, ['Type de chambre', 'type_de_chambre'])
+      if (!roomTypeRaw) return
+      const roomTypeNorm = normalizeText(roomTypeRaw)
+      const matched = configured.find((c) => roomTypeNorm.includes(c.norm) || c.norm.includes(roomTypeNorm))
+      if (!matched) return
+
+      const roomsRaw = pickNumber(row, ['Chambres'])
+      const rooms = roomsRaw > 0 ? Math.floor(roomsRaw) : 1
+      const stayDates = getStayDateKeys(row)
+      stayDates.forEach((dateKey) => {
+        const key = `${dateKey}::${matched.type}`
+        soldByDateType.set(key, (soldByDateType.get(key) || 0) + rooms)
+      })
+    })
+
+    const alertsList: Array<{ roomType: string; date: string; sold: number; capacity: number }> = []
+    soldByDateType.forEach((sold, key) => {
+      const [date, roomType] = key.split('::')
+      const conf = configured.find((c) => c.type === roomType)
+      if (!conf) return
+      if (sold > conf.capacity) {
+        alertsList.push({ roomType, date, sold, capacity: conf.capacity })
+      }
+    })
+
+    return alertsList.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12)
+  }, [bookingExport, config.rms.roomTypeCapacities])
 
   const selectedDayInsights = useMemo(() => {
     if (!bookingExport || bookingExport.length === 0) {
@@ -663,8 +808,8 @@ export const DashboardContent: React.FC = () => {
     if (selectedDayApercu) {
       const row = selectedDayApercu as Record<string, unknown>
       const demand = getApercuDemandPercent(selectedDayApercu)
-      const own = selectedDayApercu.own_price ?? pickNumber(row, ['Votre hôtel le plus bas', 'Votre hÃ´tel le plus bas'])
-      const compset = selectedDayApercu.compset_median ?? pickNumber(row, ['médiane du compset', 'mÃ©diane du compset'])
+      const own = selectedDayApercu.own_price ?? pickNumber(row, ['Votre hÃ´tel le plus bas', 'Votre hÃƒÂ´tel le plus bas'])
+      const compset = selectedDayApercu.compset_median ?? pickNumber(row, ['mÃ©diane du compset', 'mÃƒÂ©diane du compset'])
       if (demand >= 70) out.push(`Demande elevee (${demand.toFixed(0)}%) - opportunite d'optimisation tarifaire.`)
       if (own > 0 && compset > 0 && own < compset) out.push(`Tarif hotel sous mediane compset (${formatCurrency(own)} vs ${formatCurrency(compset)}).`)
     }
@@ -688,8 +833,8 @@ export const DashboardContent: React.FC = () => {
       signals.push({
         id: 'market-coverage',
         tone: 'amber',
-        message: `Évolution demande marché partielle: ${competitorTrend.summary.comparedDays3j}/${marketTrendCoverage.totalDays} jours (vs3j), ${competitorTrend.summary.comparedDays7j}/${marketTrendCoverage.totalDays} jours (vs7j).`,
-        recommendation: 'Vérifier les dates manquantes dans booking_vs_3j / booking_vs_7j et relancer le rafraîchissement.',
+        message: `Evolution demande marche partielle: ${competitorTrend.summary.comparedDays3j}/${marketTrendCoverage.totalDays} jours (vs3j), ${competitorTrend.summary.comparedDays7j}/${marketTrendCoverage.totalDays} jours (vs7j).`,
+        recommendation: 'Verifier les dates manquantes dans booking_vs_3j / booking_vs_7j et relancer le rafraichissement.',
       })
     }
 
@@ -697,15 +842,15 @@ export const DashboardContent: React.FC = () => {
       signals.push({
         id: 'market-surge',
         tone: 'rose',
-        message: `Hausse rapide de demande marché vs7j: +${competitorTrend.summary.avgDemandVs7j.toFixed(1)} pts.`,
-        recommendation: 'Appliquer une hausse graduelle BAR et contrôler la conversion sur les 72h.',
+        message: `Hausse rapide de demande marche vs7j: +${competitorTrend.summary.avgDemandVs7j.toFixed(1)} pts.`,
+        recommendation: 'Appliquer une hausse graduelle BAR et controler la conversion sur les 72h.',
       })
     } else if (competitorTrend.summary.avgDemandVs7j <= -8) {
       signals.push({
         id: 'market-drop',
         tone: 'cyan',
-        message: `Baisse de demande marché vs7j: ${competitorTrend.summary.avgDemandVs7j.toFixed(1)} pts.`,
-        recommendation: 'Activer une stimulation tactique: packs, offres ciblées, ajustement contrôlé des prix.',
+        message: `Baisse de demande marche vs7j: ${competitorTrend.summary.avgDemandVs7j.toFixed(1)} pts.`,
+        recommendation: 'Activer une stimulation tactique: packs, offres ciblees, ajustement controle des prix.',
       })
     }
 
@@ -713,8 +858,8 @@ export const DashboardContent: React.FC = () => {
       signals.push({
         id: 'active-events',
         tone: 'blue',
-        message: `${eventInsights.activeEvents} salon/événement actif(s) sur la date sélectionnée. Indice événements: ${eventInsights.eventIndex.toFixed(0)}/100.`,
-        recommendation: eventInsights.selectedDateEvents[0]?.advice || "Renforcer la stratégie prix et surveiller le pickup intra-journalier.",
+        message: `${eventInsights.activeEvents} salon/evenement actif(s) sur la date selectionnee. Indice evenements: ${eventInsights.eventIndex.toFixed(0)}/100.`,
+        recommendation: eventInsights.selectedDateEvents[0]?.advice || "Renforcer la strategie prix et surveiller le pickup intra-journalier.",
       })
     }
 
@@ -722,8 +867,18 @@ export const DashboardContent: React.FC = () => {
       signals.push({
         id: 'cancel-risk',
         tone: 'rose',
-        message: `Risque annulation élevé sur la date active: ${selectedDayInsights.cancellations} annulation(s).`,
-        recommendation: 'Contrôler les conditions flexibles, renforcer l’acompte sur les segments sensibles.',
+        message: `Risque annulation eleve sur la date active: ${selectedDayInsights.cancellations} annulation(s).`,
+        recommendation: "Controler les conditions flexibles, renforcer l'acompte sur les segments sensibles.",
+      })
+    }
+
+    if (roomTypeOverbookingAlerts.length > 0) {
+      const first = roomTypeOverbookingAlerts[0]
+      signals.push({
+        id: 'room-type-capacity',
+        tone: 'rose',
+        message: `Capacite type depassee: ${first.roomType} (${first.sold}/${first.capacity}) le ${first.date}.`,
+        recommendation: "Ajuster l'inventaire physique dans Studio RMS et corriger les fermetures par type de chambre.",
       })
     }
 
@@ -731,13 +886,13 @@ export const DashboardContent: React.FC = () => {
       signals.push({
         id: 'stable',
         tone: 'emerald',
-        message: 'Signaux business stables sur la période active.',
-        recommendation: 'Maintenir la stratégie actuelle et surveiller le pickup quotidien.',
+        message: 'Signaux business stables sur la periode active.',
+        recommendation: 'Maintenir la strategie actuelle et surveiller le pickup quotidien.',
       })
     }
 
     return signals
-  }, [competitorTrend.summary.avgDemandVs7j, competitorTrend.summary.comparedDays3j, competitorTrend.summary.comparedDays7j, eventInsights.activeEvents, eventInsights.eventIndex, eventInsights.selectedDateEvents, marketTrendCoverage.ratio3j, marketTrendCoverage.ratio7j, marketTrendCoverage.totalDays, selectedDayInsights.cancellations])
+  }, [competitorTrend.summary.avgDemandVs7j, competitorTrend.summary.comparedDays3j, competitorTrend.summary.comparedDays7j, eventInsights.activeEvents, eventInsights.eventIndex, eventInsights.selectedDateEvents, marketTrendCoverage.ratio3j, marketTrendCoverage.ratio7j, marketTrendCoverage.totalDays, roomTypeOverbookingAlerts, selectedDayInsights.cancellations])
 
   if (isLoading) {
     return (
@@ -750,7 +905,7 @@ export const DashboardContent: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-[1680px] space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-2xl">
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 p-4 text-white shadow-xl">
         <div className="absolute -right-20 -top-16 h-56 w-56 rounded-full bg-cyan-400/30 blur-3xl" />
         <div className="absolute -bottom-20 left-20 h-56 w-56 rounded-full bg-amber-300/20 blur-3xl" />
 
@@ -760,9 +915,9 @@ export const DashboardContent: React.FC = () => {
               <Sparkles className="h-3 w-3" />
               RMS Yield Command Center
             </p>
-            <h2 className="text-4xl font-black tracking-tight">{hotel?.name || hotelId} · 45 chambres</h2>
-            <p className="mt-2 text-sm text-slate-200">
-              Période: {format(startDate, 'dd MMM yyyy', { locale: fr })} au {format(endDate, 'dd MMM yyyy', { locale: fr })} · Stratégie {config.rms.strategy}
+            <h2 className="text-3xl font-black tracking-tight">{hotel?.name || hotelId}</h2>
+            <p className="mt-1 text-xs text-slate-200">
+              Periode: {format(startDate, 'dd MMM yyyy', { locale: fr })} au {format(endDate, 'dd MMM yyyy', { locale: fr })} · Strategie {config.rms.strategy}
             </p>
             <button
               onClick={() => {
@@ -778,7 +933,7 @@ export const DashboardContent: React.FC = () => {
               className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-xs font-bold uppercase tracking-wide text-white transition hover:bg-white/20"
             >
               <RefreshCcw className="h-4 w-4" />
-              Rafraîchir
+              Rafraichir
             </button>
           </div>
 
@@ -788,11 +943,11 @@ export const DashboardContent: React.FC = () => {
               <p className="text-xl font-black">{competitorsList?.length || 0}</p>
             </div>
             <div className="rounded-xl bg-white/10 p-3 backdrop-blur">
-              <p className="text-slate-300">Événements</p>
+              <p className="text-slate-300">Evenements</p>
               <p className="text-xl font-black">{eventStats.count}</p>
             </div>
             <div className="rounded-xl bg-white/10 p-3 backdrop-blur">
-              <p className="text-slate-300">Décisions RMS</p>
+              <p className="text-slate-300">Decisions RMS</p>
               <p className="text-xl font-black">{pricingSuggestions.length}</p>
             </div>
             <div className="rounded-xl bg-white/10 p-3 backdrop-blur">
@@ -826,7 +981,7 @@ export const DashboardContent: React.FC = () => {
           <KpiTile
             title="Gap Compset"
             value={formatCurrency(competitorInsight.avgGap)}
-            subtitle={`Moy. hôtel ${formatCurrency(competitorInsight.ownAvg)} vs compset ${formatCurrency(competitorInsight.compsetAvg)}`}
+            subtitle={`Moy. hotel ${formatCurrency(competitorInsight.ownAvg)} vs compset ${formatCurrency(competitorInsight.compsetAvg)}`}
             trend={competitorInsight.compsetAvg > 0 ? (competitorInsight.avgGap / competitorInsight.compsetAvg) * 100 : 0}
             icon={<Users className="h-4 w-4" />}
           />
@@ -835,21 +990,23 @@ export const DashboardContent: React.FC = () => {
           <KpiTile
             title="Pickup 7j"
             value={`${bookingPace.recentBookings}`}
-            subtitle={`sur ${bookingPace.totalBookings} réservations futures`}
+            subtitle={`sur ${bookingPace.totalBookings} reservations futures`}
             trend={bookingPace.trendPct}
             icon={<TrendingUp className="h-4 w-4" />}
           />
         )}
         {config.widgets.events && (
           <KpiTile
-            title="Salons & Événements"
+            title="Salons & Evenements"
             value={`${eventInsights.eventIndex.toFixed(0)}/100`}
-            subtitle={`${eventInsights.activeEvents} actif(s) date sélectionnée`}
+            subtitle={`${eventInsights.activeEvents} actif(s) date selectionnee`}
             trend={eventInsights.eventIndex - 50}
             icon={<CalendarDays className="h-4 w-4" />}
           />
         )}
       </section>
+
+      <YieldChart data={chartData} updatedAt={chartUpdatedAt} source={chartSource} />
 
       <section className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-3 xl:grid-cols-6">
         <div className="rounded-xl bg-slate-50 p-3">
@@ -865,32 +1022,32 @@ export const DashboardContent: React.FC = () => {
           </p>
         </div>
         <div className="rounded-xl bg-slate-50 p-3">
-          <p className="text-xs text-slate-500">Médiane compset vs 3j</p>
+          <p className="text-xs text-slate-500">Mediane compset vs 3j</p>
           <p className={`text-xl font-black ${competitorTrend.summary.avgCompsetVs3j >= 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
             {competitorTrend.summary.avgCompsetVs3j >= 0 ? '+' : ''}{formatCurrency(competitorTrend.summary.avgCompsetVs3j)}
           </p>
         </div>
         <div className="rounded-xl bg-slate-50 p-3">
-          <p className="text-xs text-slate-500">Médiane compset vs 7j</p>
+          <p className="text-xs text-slate-500">Mediane compset vs 7j</p>
           <p className={`text-xl font-black ${competitorTrend.summary.avgCompsetVs7j >= 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
             {competitorTrend.summary.avgCompsetVs7j >= 0 ? '+' : ''}{formatCurrency(competitorTrend.summary.avgCompsetVs7j)}
           </p>
         </div>
         <div className="rounded-xl bg-cyan-50 p-3">
-          <p className="text-xs text-cyan-700">Demande marché vs 3j</p>
+          <p className="text-xs text-cyan-700">Demande marche vs 3j</p>
           <p className={`text-xl font-black ${competitorTrend.summary.avgDemandVs3j >= 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
             {competitorTrend.summary.avgDemandVs3j >= 0 ? '+' : ''}{competitorTrend.summary.avgDemandVs3j.toFixed(1)} pts
           </p>
         </div>
         <div className="rounded-xl bg-cyan-50 p-3">
-          <p className="text-xs text-cyan-700">Demande marché vs 7j</p>
+          <p className="text-xs text-cyan-700">Demande marche vs 7j</p>
           <p className={`text-xl font-black ${competitorTrend.summary.avgDemandVs7j >= 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
             {competitorTrend.summary.avgDemandVs7j >= 0 ? '+' : ''}{competitorTrend.summary.avgDemandVs7j.toFixed(1)} pts
           </p>
         </div>
       </section>
       <p className="text-xs text-slate-500">
-        Couverture évolution marché: vs3j {competitorTrend.summary.comparedDays3j}/{marketTrendCoverage.totalDays} jours, vs7j {competitorTrend.summary.comparedDays7j}/{marketTrendCoverage.totalDays} jours.
+        Couverture evolution marche: vs3j {competitorTrend.summary.comparedDays3j}/{marketTrendCoverage.totalDays} jours, vs7j {competitorTrend.summary.comparedDays7j}/{marketTrendCoverage.totalDays} jours.
       </p>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -917,7 +1074,7 @@ export const DashboardContent: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="mt-3 grid grid-cols-1 gap-2">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 md:col-span-2">
               <p className="text-xs font-bold uppercase tracking-wide text-slate-700">Pickup 7j - dates d'arrivee les plus dynamiques</p>
               {bookingPace.topPickupDates.length === 0 ? (
@@ -930,30 +1087,48 @@ export const DashboardContent: React.FC = () => {
                 </div>
               )}
             </div>
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Dates a pic d'annulations (date d'annulation)</p>
+            <details className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+              <summary className="cursor-pointer text-xs font-black uppercase tracking-wide text-amber-800">
+                Pics d'annulations (date d'annulation): {cancellationInsights.spikeByCancellationDate.length}
+              </summary>
               {cancellationInsights.spikeByCancellationDate.length === 0 ? (
-                <p className="mt-1 text-sm text-amber-800">Aucun pic detecte.</p>
+                <p className="mt-2 text-sm text-amber-800">Aucun pic detecte.</p>
               ) : (
-                <div className="mt-1 space-y-1 text-sm text-amber-900">
+                <div className="mt-2 space-y-1 text-sm text-amber-900">
                   {cancellationInsights.spikeByCancellationDate.map((row) => (
                     <p key={`cancel-spike-${row.date}`}>{row.date}: <span className="font-black">{row.count}</span> annulation(s)</p>
                   ))}
                 </div>
               )}
-            </div>
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-rose-700">Dates arrivee a fort taux d'annulation</p>
+            </details>
+            <details className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2">
+              <summary className="cursor-pointer text-xs font-black uppercase tracking-wide text-rose-800">
+                Arrivees a fort taux d'annulation: {cancellationInsights.highRateByArrivalDate.length}
+              </summary>
               {cancellationInsights.highRateByArrivalDate.length === 0 ? (
-                <p className="mt-1 text-sm text-rose-800">Aucun risque eleve detecte.</p>
+                <p className="mt-2 text-sm text-rose-800">Aucun risque eleve detecte.</p>
               ) : (
-                <div className="mt-1 space-y-1 text-sm text-rose-900">
+                <div className="mt-2 space-y-1 text-sm text-rose-900">
                   {cancellationInsights.highRateByArrivalDate.map((row) => (
                     <p key={`arrival-risk-${row.date}`}>{row.date}: <span className="font-black">{(row.rate * 100).toFixed(0)}%</span> ({row.cancelled}/{row.total})</p>
                   ))}
                 </div>
               )}
-            </div>
+            </details>
+            <details className="rounded-xl border border-red-200 bg-red-50 px-3 py-2">
+              <summary className="cursor-pointer text-xs font-black uppercase tracking-wide text-red-800">
+                Alertes capacite type de chambre: {roomTypeOverbookingAlerts.length}
+              </summary>
+              {roomTypeOverbookingAlerts.length === 0 ? (
+                <p className="mt-2 text-sm text-red-800">Aucun depassement detecte.</p>
+              ) : (
+                <div className="mt-2 space-y-1 text-sm text-red-900">
+                  {roomTypeOverbookingAlerts.map((row, idx) => (
+                    <p key={`rt-cap-${row.date}-${row.roomType}-${idx}`}>{row.date}: {row.roomType} <span className="font-black">{row.sold}/{row.capacity}</span></p>
+                  ))}
+                </div>
+              )}
+            </details>
           </div>
         </section>
         <aside className="xl:sticky xl:top-24 xl:self-start">
@@ -961,6 +1136,7 @@ export const DashboardContent: React.FC = () => {
             selectedDate={selectedDashboardDate}
             onSelectDate={setSelectedDashboardDate}
             arrivalCountByDate={arrivalsByDateForCalendar}
+            eventCountByDate={eventsByDateForCalendar}
           />
         </aside>
       </div>
@@ -975,25 +1151,23 @@ export const DashboardContent: React.FC = () => {
               isSaving={updateConfig.isPending}
             />
           )}
-          {config.widgets.yieldRecommendations && <YieldChart data={chartData} />}
-
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase tracking-[0.16em] text-slate-700">Réservations à venir (booking_export)</h3>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Fenêtre active</span>
+              <h3 className="text-sm font-black uppercase tracking-[0.16em] text-slate-700">Reservations a venir (booking_export)</h3>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Fenetre active</span>
             </div>
 
             <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
               <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-xs text-slate-500">Arrivées futures</p>
+                <p className="text-xs text-slate-500">Arrivees futures</p>
                 <p className="text-lg font-black text-slate-900">{bookingInsights.upcomingCount}</p>
               </div>
               <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-xs text-slate-500">Nuitées</p>
+                <p className="text-xs text-slate-500">Nuitees</p>
                 <p className="text-lg font-black text-slate-900">{bookingInsights.upcomingNights.toFixed(0)}</p>
               </div>
               <div className="rounded-xl bg-emerald-50 p-3">
-                <p className="text-xs text-emerald-700">CA confirmé</p>
+                <p className="text-xs text-emerald-700">CA confirme</p>
                 <p className="text-lg font-black text-emerald-800">{formatCurrency(bookingInsights.confirmedRevenue)}</p>
               </div>
               <div className="rounded-xl bg-rose-50 p-3">
@@ -1004,17 +1178,17 @@ export const DashboardContent: React.FC = () => {
 
             <div className="mb-3 flex items-center gap-2 text-xs text-slate-500">
               <CalendarDays className="h-4 w-4" />
-              Délai moyen de réservation: {bookingInsights.averageLeadTime.toFixed(1)} jours
+              Delai moyen de reservation: {bookingInsights.averageLeadTime.toFixed(1)} jours
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full min-w-[620px] text-left text-sm">
                 <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="py-2 pr-3">Date arrivée</th>
-                    <th className="py-2 pr-3 text-right">Résas</th>
+                    <th className="py-2 pr-3">Date arrivee</th>
+                    <th className="py-2 pr-3 text-right">Resas</th>
                     <th className="py-2 pr-3 text-right">Chambres</th>
-                    <th className="py-2 pr-3 text-right">Nuitées</th>
+                    <th className="py-2 pr-3 text-right">Nuitees</th>
                     <th className="py-2 pr-3 text-right">CA</th>
                     <th className="py-2 pr-0 text-right">Annulations</th>
                   </tr>
@@ -1035,7 +1209,7 @@ export const DashboardContent: React.FC = () => {
 
               {bookingInsights.byDate.length === 0 && (
                 <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-                  Aucune arrivée future détectée sur la période sélectionnée.
+                  Aucune arrivee future detectee sur la periode selectionnee.
                 </div>
               )}
             </div>
@@ -1044,9 +1218,9 @@ export const DashboardContent: React.FC = () => {
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-sm font-black uppercase tracking-[0.16em] text-slate-700">
-                Décisions RMS prioritaires ({format(selectedDashboardDate, 'dd MMM', { locale: fr })})
+                Decisions RMS prioritaires ({format(selectedDashboardDate, 'dd MMM', { locale: fr })})
               </h3>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Capacité {config.rms.hotelCapacity} chambres</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Capacite {config.rms.hotelCapacity} chambres</span>
             </div>
 
             <div className="space-y-3">
@@ -1063,7 +1237,7 @@ export const DashboardContent: React.FC = () => {
                       <p className="font-bold text-slate-900">{formatCurrency(suggestion.currentPrice)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-slate-500">Recommandé</p>
+                      <p className="text-xs text-slate-500">Recommande</p>
                       <p className="font-bold text-slate-900">{formatCurrency(suggestion.suggestedPrice)}</p>
                     </div>
                     <span className={`rounded-full px-2 py-1 text-xs font-bold ${suggestion.change >= 0 ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>
@@ -1071,12 +1245,16 @@ export const DashboardContent: React.FC = () => {
                     </span>
                     {suggestion.shouldAutoApprove && <span className="rounded-full bg-cyan-50 px-2 py-1 text-xs font-bold text-cyan-700">Auto</span>}
                   </div>
+                  <details className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 md:max-w-[560px]">
+                    <summary className="cursor-pointer font-bold text-slate-800">Methode de calcul du tarif suggere</summary>
+                    <p className="mt-2">{suggestion.formulaText}</p>
+                  </details>
                 </div>
               ))}
 
               {(selectedDateSuggestions.length > 0 ? selectedDateSuggestions : pricingSuggestions).length === 0 && (
                 <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-                  Aucune action tarifaire nécessaire pour la date active.
+                  Aucune action tarifaire necessaire pour la date active.
                 </div>
               )}
             </div>
@@ -1118,7 +1296,7 @@ export const DashboardContent: React.FC = () => {
                     </button>
                     {expandedAlertId === `evt-${evt.name}` && (
                       <p className="mt-2 rounded-lg bg-white/70 p-2 text-xs">
-                        Recommandation événement: {evt.advice}
+                        Recommandation evenement: {evt.advice}
                       </p>
                     )}
                   </div>
@@ -1168,7 +1346,7 @@ export const DashboardContent: React.FC = () => {
                       className="flex w-full items-start gap-3 text-left"
                     >
                       <LayoutDashboard className="mt-0.5 h-4 w-4 shrink-0" />
-                      <p className="flex-1 text-sm font-medium">{eventStats.count} événement(s) détecté(s) avec impact moyen {eventStats.averageImpact.toFixed(1)}/10.</p>
+                      <p className="flex-1 text-sm font-medium">{eventStats.count} evenement(s) detecte(s) avec impact moyen {eventStats.averageImpact.toFixed(1)}/10.</p>
                       {expandedAlertId === 'events-signal' ? <ChevronUp className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
                     </button>
                     {expandedAlertId === 'events-signal' && (
@@ -1179,7 +1357,7 @@ export const DashboardContent: React.FC = () => {
                   </div>
                 )}
                 {alerts.length === 0 && eventStats.count === 0 && (
-                  <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Aucun signal critique sur la période.</p>
+                  <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Aucun signal critique sur la periode.</p>
                 )}
               </div>
             </section>
@@ -1199,7 +1377,7 @@ export const DashboardContent: React.FC = () => {
             <p className="mt-2 text-2xl font-black text-slate-900">{(dailyDecisions.reduce((sum, d) => sum + d.confidence, 0) / dailyDecisions.length).toFixed(1)}%</p>
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Écart moyen BAR vs reco</p>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Ecart moyen BAR vs reco</p>
             <p className="mt-2 text-2xl font-black text-slate-900">{formatCurrency(dailyDecisions.reduce((sum, d) => sum + (d.recommendedPrice - d.currentPrice), 0) / dailyDecisions.length)}</p>
           </div>
         </section>
@@ -1209,13 +1387,14 @@ export const DashboardContent: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="rounded-full bg-slate-100 px-3 py-1 font-bold text-slate-700">Poids Demande: {Math.round(config.rms.demandWeight * 100)}%</span>
           <span className="rounded-full bg-slate-100 px-3 py-1 font-bold text-slate-700">Poids Concurrence: {Math.round(config.rms.competitorWeight * 100)}%</span>
-          <span className="rounded-full bg-slate-100 px-3 py-1 font-bold text-slate-700">Poids Événement: {Math.round(config.rms.eventWeight * 100)}%</span>
+          <span className="rounded-full bg-slate-100 px-3 py-1 font-bold text-slate-700">Poids Evenement: {Math.round(config.rms.eventWeight * 100)}%</span>
           <span className="rounded-full bg-slate-100 px-3 py-1 font-bold text-slate-700">Poids Pickup: {Math.round(config.rms.pickupWeight * 100)}%</span>
-          <span className="rounded-full bg-cyan-100 px-3 py-1 font-bold text-cyan-800">Hôtel calibré: {config.rms.hotelCapacity} chambres</span>
+          <span className="rounded-full bg-cyan-100 px-3 py-1 font-bold text-cyan-800">Hotel calibre: {config.rms.hotelCapacity} chambres</span>
           <span className="rounded-full bg-slate-900 px-3 py-1 font-bold text-white"><Hotel className="mr-1 inline h-3 w-3" />Yield Model {config.rms.strategy}</span>
         </div>
       </section>
     </div>
   )
 }
+
 

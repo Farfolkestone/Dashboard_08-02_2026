@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { AuthProvider } from './components/auth/AuthProvider'
 import { useAuthStore } from './store/useAuthStore'
 import { LoginForm } from './components/auth/LoginForm'
@@ -19,6 +20,7 @@ import {
   HistoryPage
 } from './components/pages/PlaceholderPages'
 import { Loader2 } from 'lucide-react'
+import { useThemeStore } from './store/useThemeStore'
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({
@@ -48,6 +50,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean 
 
 function App() {
   const { user } = useAuthStore()
+  const { initTheme } = useThemeStore()
+
+  useEffect(() => {
+    initTheme()
+  }, [initTheme])
 
   return (
     <Router>

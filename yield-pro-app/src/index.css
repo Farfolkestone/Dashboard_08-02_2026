@@ -1,48 +1,61 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 /* Custom CSS Variables for RMS Theme */
 :root {
-  --primary: 203 89% 42%;
+  --primary: 224 76% 56%;
   --primary-foreground: 210 40% 98%;
-  --secondary: 208 100% 97%;
+  --secondary: 220 25% 96%;
   --secondary-foreground: 220 39% 11%;
-  --accent: 20 93% 49%;
+  --accent: 218 74% 52%;
   --accent-foreground: 210 40% 98%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
   --warning: 42 96% 50%;
   --warning-foreground: 26 83% 14%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 40%;
-  --background: 210 33% 98%;
-  --foreground: 222 47% 12%;
+  --muted: 220 22% 96%;
+  --muted-foreground: 217 14% 42%;
+  --background: 220 20% 95%;
+  --foreground: 222 30% 14%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 12%;
-  --border: 213 28% 88%;
-  --ring: 203 89% 42%;
-  --radius: 0.75rem;
+  --card-foreground: 222 30% 14%;
+  --border: 220 18% 87%;
+  --ring: 224 76% 56%;
+  --radius: 0.85rem;
+  --glow-primary: 37 99 235;
+  --panel-border-from: 226 232 240;
+  --panel-border-mid: 203 213 225;
 }
 
 .dark {
-  --primary: 217 91% 60%;
+  --primary: 217 91% 66%;
   --primary-foreground: 210 40% 98%;
-  --secondary: 217.2 32.6% 17.5%;
+  --secondary: 222 28% 16%;
   --secondary-foreground: 210 40% 98%;
-  --accent: 142 76% 36%;
+  --accent: 217 91% 66%;
   --accent-foreground: 210 40% 98%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
   --warning: 45 93% 47%;
   --warning-foreground: 26 83% 14%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20% 65%;
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
+  --muted: 222 26% 18%;
+  --muted-foreground: 215 20% 67%;
+  --background: 224 42% 8%;
+  --foreground: 210 40% 96%;
+  --card: 223 36% 11%;
   --card-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --ring: 217 91% 60%;
+  --border: 217 22% 24%;
+  --ring: 217 91% 66%;
+  --panel-border-from: 71 85 105;
+  --panel-border-mid: 51 65 85;
+}
+
+.light {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
 }
 
 * {
@@ -52,29 +65,188 @@
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 10% -10%, rgba(59, 130, 246, 0.08), transparent 40%),
-    radial-gradient(circle at 90% 0%, rgba(251, 146, 60, 0.1), transparent 35%),
+    radial-gradient(circle at 8% -8%, rgba(99, 102, 241, 0.08), transparent 40%),
+    radial-gradient(circle at 92% 0%, rgba(100, 116, 139, 0.15), transparent 35%),
     hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+}
+
+.dark body {
+  background:
+    radial-gradient(circle at 12% -8%, rgba(59, 130, 246, 0.16), transparent 42%),
+    radial-gradient(circle at 88% 0%, rgba(30, 41, 59, 0.55), transparent 36%),
+    hsl(var(--background));
 }
 
 h1,
 h2,
 h3,
 h4 {
-  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+code,
+pre,
+kbd,
+samp,
+.data-mono,
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace !important;
 }
 
 .glassmorphism {
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.74));
-  backdrop-filter: blur(12px);
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.78));
+  backdrop-filter: blur(7px);
+}
+
+.dark .glassmorphism {
+  background: linear-gradient(140deg, rgba(15, 23, 42, 0.74), rgba(30, 41, 59, 0.68));
+}
+
+/* Dark mode overrides for current utility-heavy UI */
+.dark .bg-white {
+  background-color: rgb(15 23 42) !important;
+}
+
+.dark [class*="bg-white/"] {
+  background-color: rgb(15 23 42 / 0.82) !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: rgb(15 23 42 / 0.72) !important;
+}
+
+.dark [class*="bg-slate-50/"] {
+  background-color: rgb(15 23 42 / 0.72) !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: rgb(30 41 59 / 0.8) !important;
+}
+
+.dark [class*="bg-slate-100/"] {
+  background-color: rgb(30 41 59 / 0.82) !important;
+}
+
+.dark .bg-slate-900 {
+  background-color: rgb(15 23 42) !important;
+}
+
+.dark [class*="bg-slate-900/"] {
+  background-color: rgb(15 23 42 / 0.88) !important;
+}
+
+.dark .text-slate-900 {
+  color: rgb(241 245 249) !important;
+}
+
+.dark .text-slate-800 {
+  color: rgb(226 232 240) !important;
+}
+
+.dark .text-slate-700 {
+  color: rgb(203 213 225) !important;
+}
+
+.dark .text-slate-600,
+.dark .text-slate-500 {
+  color: rgb(148 163 184) !important;
+}
+
+.dark .text-slate-300 {
+  color: rgb(203 213 225) !important;
+}
+
+.dark .border-slate-200,
+.dark .border-slate-100,
+.dark .border {
+  border-color: rgb(51 65 85) !important;
+}
+
+.dark [class*="border-white/"] {
+  border-color: rgb(71 85 105 / 0.45) !important;
+}
+
+.dark .shadow-sm,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.45) !important;
+}
+
+.dark [class*="bg-gradient-to-r"][class*="from-slate-900"][class*="via-slate-800"][class*="to-slate-700"] {
+  background-image: linear-gradient(to right, rgb(15 23 42), rgb(30 41 59), rgb(30 41 59)) !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: rgb(15 23 42) !important;
+  color: rgb(226 232 240) !important;
+  border-color: rgb(51 65 85) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgb(148 163 184) !important;
+}
+
+.dark button[class*="bg-white"] {
+  background-color: rgb(30 41 59) !important;
+  color: rgb(226 232 240) !important;
+  border-color: rgb(71 85 105) !important;
+}
+
+.dark [class*="text-white"] {
+  color: rgb(241 245 249) !important;
+}
+
+/* Subtle gradient border for containers/cards */
+section[class*="rounded-2xl"][class*="border"][class*="bg-white"],
+div[class*="rounded-2xl"][class*="border"][class*="bg-white"],
+aside[class*="rounded-2xl"][class*="border"][class*="bg-white"],
+section[class*="rounded-xl"][class*="border"][class*="bg-white"],
+div[class*="rounded-xl"][class*="border"][class*="bg-white"] {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+    linear-gradient(135deg,
+      rgba(var(--panel-border-from), 0.85) 0%,
+      rgba(var(--panel-border-mid), 0.35) 55%,
+      rgba(var(--panel-border-mid), 0.06) 100%) border-box !important;
+}
+
+.dark section[class*="rounded-2xl"][class*="border"][class*="bg-white"],
+.dark div[class*="rounded-2xl"][class*="border"][class*="bg-white"],
+.dark aside[class*="rounded-2xl"][class*="border"][class*="bg-white"],
+.dark section[class*="rounded-xl"][class*="border"][class*="bg-white"],
+.dark div[class*="rounded-xl"][class*="border"][class*="bg-white"] {
+  background:
+    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+    linear-gradient(135deg,
+      rgba(var(--panel-border-from), 0.45) 0%,
+      rgba(var(--panel-border-mid), 0.26) 55%,
+      rgba(var(--panel-border-mid), 0.08) 100%) border-box !important;
+}
+
+/* Active/status glow */
+[class*="bg-cyan-50"],
+[class*="bg-emerald-50"],
+[class*="bg-rose-50"],
+[class*="bg-amber-50"] {
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.15), 0 8px 22px -14px rgba(30, 64, 175, 0.25);
+}
+
+[class*="shadow-slate-900/20"],
+[class*="shadow-rose-500/25"] {
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.24), 0 10px 24px -14px rgba(var(--glow-primary), 0.48) !important;
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -84,11 +256,19 @@ h4 {
 
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 4px;
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Structured data tables with sticky headers */
+.overflow-x-auto table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  backdrop-filter: blur(4px);
 }
 
 /* React DatePicker customization */

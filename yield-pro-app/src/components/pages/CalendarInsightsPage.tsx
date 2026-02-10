@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useBookingApercu, useBookingExport } from '../../hooks/useBookingData'
 import { useCompetitorRates } from '../../hooks/useCompetitorData'
+import { useEvents } from '../../hooks/useHotelData'
 import { useAuthStore } from '../../store/useAuthStore'
 import type { Database } from '../../types/database.types'
 import { formatCurrency } from '../../utils/formatters'
@@ -14,6 +15,7 @@ import { clearMetrics, getMetrics } from '../../utils/metricsLogger'
 type BookingExportRow = Database['public']['Tables']['booking_export']['Row']
 type BookingApercuRow = Database['public']['Tables']['booking_apercu']['Row']
 type BookingTarifsRow = Database['public']['Tables']['booking_tarifs']['Row']
+type EventRow = Database['public']['Tables']['events_calendar']['Row']
 type BookingExportLike = BookingExportRow & {
   arrival_date?: string | null
   departure_date?: string | null
@@ -262,6 +264,7 @@ export const CalendarInsightsPage: React.FC = () => {
   const { data: reservations = [], isLoading, refetch, isFetching } = useBookingExport(hotelId, fetchStart, fetchEnd)
   const { data: bookingApercu = [] } = useBookingApercu(hotelId, fetchStart, fetchEnd)
   const { data: competitorRates = [] } = useCompetitorRates(hotelId, fetchStart, fetchEnd)
+  const { data: events = [] } = useEvents(hotelId, fetchStart, fetchEnd)
 
   const allFetchedRows = useMemo(() => {
     return (reservations as BookingExportLike[])
@@ -364,6 +367,29 @@ export const CalendarInsightsPage: React.FC = () => {
 
     return map
   }, [competitorRates])
+
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, string[]>()
+    ;(events as EventRow[]).forEach((event) => {
+      const row = event as Record<string, unknown>
+      const name = readString(row, ['Ã‰vÃ©nement', 'Événement', 'event', 'name']) || 'Evenement'
+      const start = parseDate(readString(row, ['DÃ©but', 'Début', 'start_date']))
+      const end = parseDate(readString(row, ['Fin', 'end_date'])) || start
+      if (!start || !end) return
+      const cur = new Date(start)
+      cur.setHours(0, 0, 0, 0)
+      const last = new Date(end)
+      last.setHours(0, 0, 0, 0)
+      while (cur <= last) {
+        const key = toIsoLocal(cur)
+        const list = map.get(key) || []
+        list.push(name)
+        map.set(key, list)
+        cur.setDate(cur.getDate() + 1)
+      }
+    })
+    return map
+  }, [events])
 
   const selectedKey = toIsoLocal(selectedDate)
   const effectiveSelectedKey = selectedKey
@@ -768,6 +794,7 @@ export const CalendarInsightsPage: React.FC = () => {
               const key = toIsoLocal(day)
               const count = arrivalsByDate.get(key)?.length || 0
               const apercu = apercuByDate.get(key)
+              const dayEvents = eventsByDate.get(key) || []
               const demandPct = Math.round((apercu?.demandIndex || 0) * 100)
               const selected = key === effectiveSelectedKey || isSameDay(day, selectedDate)
               const demandClass = demandPct >= 70 ? 'bg-red-100 border-red-300' : demandPct >= 45 ? 'bg-orange-100 border-orange-300' : 'bg-emerald-100 border-emerald-300'
@@ -785,6 +812,9 @@ export const CalendarInsightsPage: React.FC = () => {
                   <div className="text-2xl font-black leading-none text-slate-900">{format(day, 'd')}</div>
                   <div className="mt-2 text-[11px] font-semibold tracking-wide text-slate-700">Demande {demandPct}%</div>
                   <div className="mt-1 text-[10px] text-slate-600">{count} arrivees</div>
+                  {dayEvents.length > 0 && (
+                    <div className="mt-1 text-[10px] font-bold text-amber-700">{dayEvents.length} evt</div>
+                  )}
                 </button>
               )
             })}
@@ -807,6 +837,7 @@ export const CalendarInsightsPage: React.FC = () => {
                   <p>Hotel concurrence le moins cher: <span className="font-black">{lowestCompetitorByDate.get(detailDateIso)?.hotelName || '-'}</span></p>
                 </>
               )}
+              <p>Salons & evenements: <span className="font-black">{(eventsByDate.get(detailDateIso) || []).join(' | ') || '-'}</span></p>
             </div>
           </div>
         )}

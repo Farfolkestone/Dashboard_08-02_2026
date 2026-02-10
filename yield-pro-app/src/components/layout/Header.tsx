@@ -1,6 +1,7 @@
 import React from 'react'
-import { Bell, Search, Calendar as CalendarIcon } from 'lucide-react'
+import { Bell, Search, Calendar as CalendarIcon, Moon, Sun } from 'lucide-react'
 import { useAuthStore } from '../../store/useAuthStore'
+import { useThemeStore } from '../../store/useThemeStore'
 
 interface HeaderProps {
     startDate: Date | null
@@ -24,6 +25,7 @@ const parseInputDate = (value: string) => {
 
 export const Header: React.FC<HeaderProps> = ({ startDate, endDate, onStartDateChange, onEndDateChange }) => {
     const { profile } = useAuthStore()
+    const { theme, toggleTheme } = useThemeStore()
     const effectiveStart = startDate || new Date()
     const effectiveEnd = endDate || new Date()
 
@@ -66,6 +68,14 @@ export const Header: React.FC<HeaderProps> = ({ startDate, endDate, onStartDateC
             </div>
 
             <div className="ml-6 flex items-center gap-4">
+                <button
+                    onClick={toggleTheme}
+                    className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 hover:bg-slate-50"
+                    title={theme === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'}
+                >
+                    {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                </button>
+
                 <button className="relative rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 hover:bg-slate-50">
                     <Bell className="h-5 w-5" />
                     <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500" />

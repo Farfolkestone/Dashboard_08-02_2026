@@ -18,42 +18,64 @@ interface YieldChartProps {
         market: number
         demand: number
     }>
+    updatedAt?: string | null
+    source?: 'booking_apercu' | 'fallback_rms' | 'empty'
 }
 
-export const YieldChart: React.FC<YieldChartProps> = ({ data }) => {
+export const YieldChart: React.FC<YieldChartProps> = ({ data, updatedAt, source = 'empty' }) => {
     // Deterministic recommendation to keep render pure and predictable.
-    const chartData = data.map(d => ({
-        ...d,
-        recommendation: d.price * (1 + Math.min(0.15, Math.max(-0.05, d.demand * 0.002 - 0.02))),
-        compHigh: d.market * 1.25,
-        compLow: d.market * 0.85
-    }))
+    const chartData = data
+        .map((d) => {
+            const price = Number.isFinite(d.price) ? d.price : 0
+            const market = Number.isFinite(d.market) ? d.market : 0
+            const demand = Number.isFinite(d.demand) ? d.demand : 0
+            return {
+                ...d,
+                price,
+                market,
+                demand,
+                recommendation: price * (1 + Math.min(0.15, Math.max(-0.05, demand * 0.002 - 0.02))),
+                compHigh: market * 1.25,
+                compLow: market * 0.85
+            }
+        })
+        .filter((d) => Number.isFinite(d.price) && Number.isFinite(d.market))
+
+    const safeChartData = chartData.length > 0
+        ? chartData
+        : [{ date: '-', price: 0, market: 0, demand: 0, recommendation: 0, compHigh: 0, compLow: 0 }]
+
+    const updatedDate = updatedAt ? new Date(updatedAt) : null
+    const updatedLabel = updatedDate && !Number.isNaN(updatedDate.getTime())
+        ? `Mise a jour ${updatedDate.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}`
+        : 'Mise a jour indisponible'
+    const sourceLabel =
+        source === 'booking_apercu'
+            ? 'Source: booking_apercu'
+            : source === 'fallback_rms'
+                ? 'Source: fallback RMS'
+                : 'Source: indisponible'
 
     return (
-        <div className="bg-card border rounded-xl shadow-lg p-6 glassmorphism">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="font-black text-sm flex items-center gap-2">
-                    BAR vs Competitors | <span className="text-primary italic">YieldPro Smart Recommendation</span>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-slate-700">
+                    BAR vs Concurrence | <span className="text-primary italic">Recommandation YieldPro</span>
                 </h3>
                 <div className="flex items-center gap-4">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold">Updated Monday, Oct 03, 2023</span>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase text-slate-600">{updatedLabel}</span>
+                    <span className="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-bold uppercase text-indigo-700">{sourceLabel}</span>
                     <MoreVertical className="w-4 h-4 text-muted-foreground cursor-pointer" />
                 </div>
             </div>
 
-            <div className="h-[400px] w-full min-w-0 min-h-[320px]">
-                <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={320}>
-                    <ComposedChart data={chartData}>
+            <div className="h-[400px] w-full min-w-0">
+                <ResponsiveContainer width="100%" height={360}>
+                    <ComposedChart data={safeChartData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f0f0f0" />
 
                         {/* Range Area (Compset bounds) */}
-                        <Area
-                            type="monotone"
-                            dataKey="compHigh"
-                            baseValue="dataMin"
-                            stroke="none"
-                            fill="transparent"
-                        />
+                        <Area type="monotone" dataKey="compHigh" baseValue="dataMin" stroke="none" fill="transparent" />
                         <Area
                             type="monotone"
                             dataKey="compLow"
@@ -87,12 +109,21 @@ export const YieldChart: React.FC<YieldChartProps> = ({ data }) => {
                         />
 
                         <Tooltip
+                            formatter={(value: number | string | undefined, name) => {
+                                const numeric = typeof value === 'number' ? value : Number(value ?? 0)
+                                const label = String(name)
+                                return [`${Number.isFinite(numeric) ? numeric.toFixed(0) : String(value ?? 0)} €`, label]
+                            }}
+                            labelFormatter={(label) => `Date: ${String(label)}`}
                             contentStyle={{
-                                borderRadius: '8px',
-                                border: 'none',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                                fontSize: '11px',
-                                fontWeight: 'bold'
+                                borderRadius: '10px',
+                                border: '1px solid #cbd5e1',
+                                boxShadow: '0 12px 24px -8px rgba(15, 23, 42, 0.28)',
+                                backgroundColor: '#ffffff',
+                                color: '#0f172a',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                padding: '10px 12px',
                             }}
                             cursor={{ stroke: '#f43f5e', strokeWidth: 1, strokeDasharray: '5 5' }}
                         />
@@ -120,10 +151,15 @@ export const YieldChart: React.FC<YieldChartProps> = ({ data }) => {
                         />
                     </ComposedChart>
                 </ResponsiveContainer>
+                {chartData.length === 0 && (
+                    <p className="mt-2 text-center text-xs font-semibold text-slate-500">
+                        Aucune donnée disponible pour afficher la courbe sur la période sélectionnée.
+                    </p>
+                )}
             </div>
 
             {/* Chart Legend */}
-            <div className="grid grid-cols-4 gap-4 mt-8 px-4 py-3 border-t bg-muted/5 rounded-lg text-[9px] font-black uppercase tracking-tighter text-muted-foreground">
+            <div className="mt-5 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] font-black uppercase tracking-wide text-slate-600 md:grid-cols-4">
                 <div className="flex items-center gap-2">
                     <div className="w-10 h-0.5 bg-[#6366f1]" />
                     <span className="flex items-center gap-1">BAR <div className="w-1.5 h-1.5 rounded-full bg-[#6366f1]" /></span>

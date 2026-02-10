@@ -42,6 +42,7 @@ export interface PricingSuggestion {
   change: number
   changePercent: number
   reason: string
+  formulaText: string
   confidence: number
   shouldAutoApprove: boolean
 }
@@ -57,11 +58,13 @@ export interface RMSDailyDecision {
   recommendedPrice: number
   confidence: number
   reason: string
+  formulaText: string
   shouldAutoApprove: boolean
 }
 
 const defaultSettings: RMSSettings = {
   hotelCapacity: 45,
+  roomTypeCapacities: {},
   strategy: 'balanced',
   targetOccupancy: 82,
   minAdr: 95,
@@ -397,6 +400,11 @@ export const useRMSCalculations = (
       else if (changePct <= -6) reason = 'Baisse forte: risque de sous-occupation'
       else if (changePct <= -2) reason = 'Baisse tactique: stimulation pickup court terme'
 
+      const formulaText =
+        `Tarif suggéré = arrondi(clamp(BAR × (1 + signal/100) × ajustements, ${Math.max(rmsSettings.minAdr, rmsSettings.minPrice)}..${Math.min(rmsSettings.maxAdr, rmsSettings.maxPrice)}), pas ${rmsSettings.priceStep}). ` +
+        `Signal = (Demande-50)*${rmsSettings.demandWeight.toFixed(2)} + EcartCompset*${rmsSettings.competitorWeight.toFixed(2)} + ((Evenement-50)/2)*${rmsSettings.eventWeight.toFixed(2)} + (Pickup-30)*${rmsSettings.pickupWeight.toFixed(2)} + PressionOcc*0.20. ` +
+        `Valeurs du jour: signal=${weightedSignal.toFixed(2)}, demande=${demandIndex.toFixed(1)}, ecartCompset=${competitorGapPct.toFixed(1)}%, evenement=${eventImpact.toFixed(1)}, pickup=${pickupPressure.toFixed(1)}, occ=${occupancyOnBooks.toFixed(1)}%.`
+
       return {
         date,
         occupancyOnBooks,
@@ -408,6 +416,7 @@ export const useRMSCalculations = (
         recommendedPrice: boundedRecommended,
         confidence,
         reason,
+        formulaText,
         shouldAutoApprove: Math.abs(changePct) <= rmsSettings.autoApproveThresholdPct
       }
     })
@@ -426,6 +435,7 @@ export const useRMSCalculations = (
           change: Math.round(change),
           changePercent: Math.round(changePercent * 10) / 10,
           reason: decision.reason,
+          formulaText: decision.formulaText,
           confidence: Math.round(decision.confidence),
           shouldAutoApprove: decision.shouldAutoApprove
         }

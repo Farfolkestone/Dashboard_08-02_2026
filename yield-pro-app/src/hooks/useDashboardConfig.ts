@@ -18,6 +18,7 @@ export interface DashboardWidgets {
 
 export interface RMSSettings {
     hotelCapacity: number
+    roomTypeCapacities: Record<string, number>
     strategy: 'conservative' | 'balanced' | 'aggressive'
     targetOccupancy: number
     minAdr: number
@@ -61,6 +62,7 @@ const defaultWidgets: DashboardWidgets = {
 
 const defaultRmsSettings: RMSSettings = {
     hotelCapacity: 45,
+    roomTypeCapacities: {},
     strategy: 'balanced',
     targetOccupancy: 82,
     minAdr: 95,
@@ -144,6 +146,13 @@ const parseConfig = (input: Json | null | undefined): DashboardConfigPayload => 
     const rmsNode = asRecord(root.rms) || {}
     const uiNode = asRecord(root.ui) || {}
 
+    const roomTypeCapacitiesNode = asRecord(rmsNode.roomTypeCapacities)
+    const roomTypeCapacities = Object.entries(roomTypeCapacitiesNode || {}).reduce<Record<string, number>>((acc, [key, value]) => {
+        const parsed = parseNumber(value, 0)
+        if (key.trim() && parsed >= 0) acc[key] = parsed
+        return acc
+    }, {})
+
     return {
         version: parseNumber(root.version, 2),
         widgets: {
@@ -160,6 +169,7 @@ const parseConfig = (input: Json | null | undefined): DashboardConfigPayload => 
         },
         rms: {
             hotelCapacity: parseNumber(rmsNode.hotelCapacity, defaultRmsSettings.hotelCapacity),
+            roomTypeCapacities,
             strategy: parseStrategy(rmsNode.strategy, defaultRmsSettings.strategy),
             targetOccupancy: parseNumber(rmsNode.targetOccupancy, defaultRmsSettings.targetOccupancy),
             minAdr: parseNumber(rmsNode.minAdr, defaultRmsSettings.minAdr),

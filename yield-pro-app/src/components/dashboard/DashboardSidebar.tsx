@@ -6,11 +6,17 @@ type DashboardSidebarProps = {
   selectedDate: Date
   onSelectDate: (date: Date) => void
   arrivalCountByDate?: Record<string, number>
+  eventCountByDate?: Record<string, number>
 }
 
 const toDateKey = (date: Date) => format(date, 'yyyy-MM-dd')
 
-export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ selectedDate, onSelectDate, arrivalCountByDate = {} }) => {
+export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
+  selectedDate,
+  onSelectDate,
+  arrivalCountByDate = {},
+  eventCountByDate = {},
+}) => {
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
   useEffect(() => {
@@ -44,6 +50,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ selectedDate
           const selected = isSameDay(day, selectedDate)
           const key = toDateKey(day)
           const arrivals = arrivalCountByDate[key] || 0
+          const events = eventCountByDate[key] || 0
           return (
             <button
               key={day.toISOString()}
@@ -54,6 +61,11 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ selectedDate
               {arrivals > 0 && (
                 <span className={`absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full px-1.5 text-[10px] font-black ${selected ? 'bg-cyan-300 text-slate-900' : 'bg-cyan-600 text-white'}`}>
                   {arrivals}
+                </span>
+              )}
+              {events > 0 && (
+                <span className={`absolute -top-1 -right-1 rounded-full px-1.5 text-[10px] font-black ${selected ? 'bg-amber-300 text-slate-900' : 'bg-amber-500 text-white'}`}>
+                  E{events}
                 </span>
               )}
             </button>
